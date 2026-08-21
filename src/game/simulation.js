@@ -4,6 +4,7 @@ import { getMilestone } from './progression.js';
 const WORLD_BOUNDS = { width: 360, height: 640 };
 export const HEIGHT_PIXELS_PER_METER = 12;
 export const CRACKED_LEAF_COLLAPSE_SECONDS = 0.45;
+export const FIXED_LEAF_IMPACT_SECONDS = 0.18;
 
 function circleOverlapsRect(circle, rect) {
   const closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.width));
@@ -36,9 +37,15 @@ function advancePlatforms(platforms, dt) {
   const safeDt = Math.min(Math.max(dt, 0), 1 / 30);
   const events = [];
   const nextPlatforms = platforms.map((platform) => {
-    const moved = platform.kind === 'moving-leaf'
+    let moved = platform.kind === 'moving-leaf'
       ? advanceMovingEntity(platform, safeDt)
       : platform;
+    if (moved.impactTime > 0) {
+      moved = {
+        ...moved,
+        impactTime: Math.max(0, moved.impactTime - safeDt),
+      };
+    }
     if (!moved.collapsing) return moved;
 
     const collapseTime = Math.max(0, moved.collapseTime - safeDt);
@@ -120,6 +127,11 @@ export function stepRun(run, input = {}, dt) {
           }
           : candidate);
         events.push('platformTriggered');
+      } else if (platform.kind === 'leaf') {
+        platforms = platforms.map((candidate) => candidate === platform
+          ? { ...candidate, impactTime: FIXED_LEAF_IMPACT_SECONDS }
+          : candidate);
+        events.push('platformImpact');
       }
     }
   }

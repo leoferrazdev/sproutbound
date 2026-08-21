@@ -41,6 +41,29 @@ test('descending player lands on a leaf and bounces automatically', () => {
   assert.equal(result.run.score, 10);
 });
 
+test('landing on a fixed leaf starts a visual impact without moving its collision plane', () => {
+  const run = {
+    state: 'playing',
+    score: 0,
+    bestScore: 0,
+    startY: 206,
+    cameraY: 0,
+    player: { ...createPlayer({ x: 80, y: 80 }), grounded: false, vy: 220 },
+    platforms: [{ x: 60, y: 120, width: 100, height: 18, kind: 'leaf' }],
+    thorns: [],
+    sunDrops: [],
+  };
+
+  const result = stepRun(run, {}, 0.2);
+  const platform = result.run.platforms[0];
+
+  assert.ok(result.events.includes('landed'));
+  assert.ok(result.events.includes('platformImpact'));
+  assert.equal(platform.y, 120);
+  assert.ok(platform.impactTime > 0);
+  assert.equal(result.run.player.y, 86);
+});
+
 test('thorn collision and falling emit one playerDied event', () => {
   const run = {
     state: 'playing',
