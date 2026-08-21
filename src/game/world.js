@@ -41,45 +41,55 @@ export function createWorld(seed = 1, {
       ? previousX
       : clamp(previousX + drift, 0, width - platformWidth);
     const platform = createPlatform({ x, y, width: platformWidth });
-
-    entities.push({ type: 'platform', row: index, ...platform });
+    let routeX = x;
+    let routeWidth = platformWidth;
 
     if (extendedWorld && altitudeMeters >= 30) {
       const specialWidth = 70 + Math.floor(random() * 21);
       const specialKind = index % 2 === 0 ? 'cracked-leaf' : 'moving-leaf';
-      const specialX = x < width / 2
-        ? clamp(x + platformWidth + 18, 0, width - specialWidth)
-        : clamp(x - specialWidth - 18, 0, width - specialWidth);
-      const special = createPlatform({
-        x: specialX,
-        y,
-        width: specialWidth,
-        kind: specialKind,
-      });
 
       if (specialKind === 'moving-leaf') {
+        const movingX = clamp(x, 0, width - specialWidth);
+        const special = createPlatform({
+          x: movingX,
+          y,
+          width: specialWidth,
+          kind: specialKind,
+        });
         entities.push({
           type: 'platform',
           row: index,
           ...special,
-          baseX: specialX,
+          baseX: movingX,
           motionRange: 24 + Math.floor(random() * 12),
           motionPhase: random() * Math.PI * 2,
           motionSpeed: 1.1 + random() * 0.5,
         });
+        routeX = movingX;
+        routeWidth = specialWidth;
       } else {
-        entities.push({ type: 'platform', row: index, ...special });
+        entities.push({ type: 'platform', row: index, ...platform });
+        const specialX = x < width / 2
+          ? clamp(x + platformWidth + 18, 0, width - specialWidth)
+          : clamp(x - specialWidth - 18, 0, width - specialWidth);
+        entities.push({
+          type: 'platform',
+          row: index,
+          ...createPlatform({ x: specialX, y, width: specialWidth, kind: specialKind }),
+        });
       }
+    } else {
+      entities.push({ type: 'platform', row: index, ...platform });
     }
 
-    previousX = x;
-    previousWidth = platformWidth;
+    previousX = routeX;
+    previousWidth = routeWidth;
     currentY -= index < 3 ? 72 : 84;
 
     if (index >= 2 && index % 3 === 0) {
       const sun = {
         type: 'sun',
-        x: x + platformWidth / 2,
+        x: routeX + routeWidth / 2,
         y: y - 30,
         radius: 8,
         kind: 'sun',
@@ -98,7 +108,7 @@ export function createWorld(seed = 1, {
     if (extendedWorld && index >= 7 && index % 3 === 1) {
       entities.push({
         type: 'thorn',
-        x: clamp(x + platformWidth - 24, 0, width - 22),
+        x: clamp(routeX + routeWidth - 24, 0, width - 22),
         y: y - 18,
         width: 22,
         height: 18,

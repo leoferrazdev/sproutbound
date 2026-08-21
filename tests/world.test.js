@@ -42,9 +42,15 @@ test('extended world keeps the climb available beyond the first viewport', () =>
   assert.ok(fragile.length > 0);
   assert.ok(earlyRows.every((row) => row.every((platform) => platform.kind === 'leaf')));
   assert.ok(lateRows.some((row) => row.some((platform) => platform.kind !== 'leaf')));
-  assert.equal(lateRows.every((row) => row.some((platform) => platform.kind === 'leaf')), true);
-  assert.equal(lateRows.every((row) => row.length >= 2), true);
-  assert.ok(lateRows.some((row) => row.some((platform) => platform.kind === 'moving-leaf')));
+  const movingRows = lateRows.filter((row) => row.some((platform) => platform.kind === 'moving-leaf'));
+  const crackedRows = lateRows.filter((row) => row.some((platform) => platform.kind === 'cracked-leaf'));
+
+  assert.ok(movingRows.length > 0);
+  assert.equal(movingRows.every((row) => row.length === 1), true);
+  assert.equal(movingRows.every((row) => row[0].kind === 'moving-leaf'), true);
+  assert.equal(crackedRows.every((row) => row.some((platform) => platform.kind === 'leaf')), true);
+  assert.equal(crackedRows.every((row) => row.some((platform) => platform.kind === 'cracked-leaf')), true);
+  assert.equal(lateRows.every((row) => row.length === 1 || row.length === 2), true);
   assert.deepEqual(
     createWorld(5, { ...viewport, platformCount: 30 }),
     createWorld(5, { ...viewport, platformCount: 30 }),
