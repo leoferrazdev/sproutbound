@@ -49,6 +49,7 @@ export function createApp(documentRef) {
       input.right = false;
       input.pointerX = null;
       input.active = false;
+      input.pressed = false;
       simulation.run = createRun();
       hud.update(simulation.run);
       hud.showObjective(`Próximo: ${simulation.run.nextUnlock.label}`);

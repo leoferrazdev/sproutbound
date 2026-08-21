@@ -12,6 +12,7 @@ export function createInputState() {
     right: false,
     pointerX: null,
     active: false,
+    pressed: false,
   };
 }
 
@@ -20,6 +21,7 @@ function clearInput(state) {
   state.right = false;
   state.pointerX = null;
   state.active = false;
+  state.pressed = false;
 }
 
 function pointerPosition(target, event) {
@@ -36,6 +38,7 @@ export function bindInput(target, state) {
     if (!direction) return;
     state[direction] = true;
     state.active = true;
+    state.pressed = true;
     if (event.cancelable) event.preventDefault();
   };
   const onKeyUp = (event) => {
@@ -47,6 +50,7 @@ export function bindInput(target, state) {
   const onPointerDown = (event) => {
     state.pointerX = pointerPosition(target, event);
     state.active = true;
+    state.pressed = true;
     if (event.cancelable) event.preventDefault();
   };
   const onPointerMove = (event) => {
@@ -85,13 +89,15 @@ export function bindInput(target, state) {
 }
 
 export function readInput(state, viewportWidth) {
-  if (state.left && !state.right) return { axis: -1, primary: state.active };
-  if (state.right && !state.left) return { axis: 1, primary: state.active };
+  const primary = state.active || state.pressed;
+  state.pressed = false;
+  if (state.left && !state.right) return { axis: -1, primary };
+  if (state.right && !state.left) return { axis: 1, primary };
   if (state.active && state.pointerX !== null) {
     return {
       axis: state.pointerX < viewportWidth / 2 ? -1 : 1,
-      primary: true,
+      primary,
     };
   }
-  return { axis: 0, primary: false };
+  return { axis: 0, primary };
 }

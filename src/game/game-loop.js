@@ -21,11 +21,12 @@ export function createGameLoop({ canvas, simulation, renderer, ui, input }) {
     if (!running) return;
     const elapsed = lastTime === 0 ? 0 : Math.min((time - lastTime) / 1000, 1 / 15);
     lastTime = time;
-    const axis = readInput(input, LOGICAL_WIDTH).axis;
+    const normalizedInput = readInput(input, LOGICAL_WIDTH);
+    const axis = normalizedInput.axis;
     const result = simulation.stepRun(simulation.run, {
       left: axis < 0,
       right: axis > 0,
-      primary: input.active,
+      primary: normalizedInput.primary,
     }, elapsed);
     simulation.run = {
       ...result.run,

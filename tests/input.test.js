@@ -49,3 +49,16 @@ test('blur clears active input and unbind removes listeners', () => {
   dispatch(target, 'keydown', { code: 'KeyD' });
   assert.equal(readInput(state, 360).axis, 0);
 });
+
+test('a quick tap preserves one primary press for the next frame', () => {
+  const target = new EventTarget();
+  const state = createInputState();
+  const unbind = bindInput(target, state);
+
+  dispatch(target, 'pointerdown', { clientX: 40 });
+  dispatch(target, 'pointerup', { clientX: 40 });
+
+  assert.equal(readInput(state, 360).primary, true);
+  assert.equal(readInput(state, 360).primary, false);
+  unbind();
+});
