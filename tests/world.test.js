@@ -24,8 +24,15 @@ test('initial world keeps early platforms readable and hazard-free', () => {
 test('extended world keeps the climb available beyond the first viewport', () => {
   const world = createWorld(5, { ...viewport, platformCount: 30 });
   const platforms = world.filter((entity) => entity.type === 'platform');
+  const fragile = platforms.filter((platform) => platform.kind === 'cracked-leaf');
 
   assert.equal(platforms.length, 30);
   assert.ok(platforms.at(-1).y < -1000);
   assert.ok(world.some((entity) => entity.type === 'thorn'));
+  assert.ok(fragile.length > 0);
+  assert.equal(fragile.every((platform) => platforms.indexOf(platform) >= 6), true);
+  assert.deepEqual(
+    createWorld(5, { ...viewport, platformCount: 30 }),
+    createWorld(5, { ...viewport, platformCount: 30 }),
+  );
 });

@@ -39,7 +39,10 @@ export function createWorld(seed = 1, {
     const x = index === 0
       ? previousX
       : clamp(previousX + drift, 0, width - platformWidth);
-    const platform = createPlatform({ x, y, width: platformWidth });
+    const kind = extendedWorld && index >= 6 && index % 4 === 2
+      ? 'cracked-leaf'
+      : 'leaf';
+    const platform = createPlatform({ x, y, width: platformWidth, kind });
 
     entities.push({ type: 'platform', ...platform });
     previousX = x;
