@@ -1,3 +1,6 @@
+import { createRun } from './game/model.js';
+import { bindInput, createInputState } from './input.js';
+
 export function createApp(documentRef) {
   const gameRoot = documentRef.querySelector('#game');
   if (!gameRoot) {
@@ -14,7 +17,15 @@ export function createApp(documentRef) {
 
   canvas.width = 360;
   canvas.height = 640;
-  return { gameRoot, canvas };
+  const input = createInputState();
+  const unbindInput = bindInput(canvas, input);
+  return {
+    gameRoot,
+    canvas,
+    run: createRun(),
+    input,
+    unbindInput,
+  };
 }
 
 if (typeof window !== 'undefined' && window.document) {
