@@ -30,7 +30,7 @@
 - Consumes: `createWorld(seed, { width, height, platformCount })`.
 - Produces: row-tagged platform entities with a fixed `leaf` and, after 30 m, one deterministic `cracked-leaf` or `moving-leaf` alternative.
 
-- [ ] **Step 1: Write the failing world tests**
+- [x] **Step 1: Write the failing world tests**
 
 Extend the extended-world test with:
 
@@ -51,13 +51,13 @@ assert.ok(lateRows.every((row) => row.some((platform) => platform.kind === 'leaf
 assert.ok(lateRows.every((row) => row.length >= 2));
 ```
 
-- [ ] **Step 2: Run the focused world test and verify RED**
+- [x] **Step 2: Run the focused world test and verify RED**
 
 Run `npm test -- tests/world.test.js`.
 
 Expected result: the new assertions fail because the world currently has one platform per row and no `row` metadata.
 
-- [ ] **Step 3: Implement deterministic paired-row generation**
+- [x] **Step 3: Implement deterministic paired-row generation**
 
 In `src/game/world.js`, calculate `altitudeMeters` from `(firstY - y) / 12`, add `row: index` to the primary platform, and after `altitudeMeters >= 30` create one second platform at the same `y`. Keep the primary platform `kind: 'leaf'`. Alternate or deterministically choose the second kind between `cracked-leaf` and `moving-leaf`; assign movement metadata only to `moving-leaf`:
 
@@ -70,11 +70,11 @@ In `src/game/world.js`, calculate `altitudeMeters` from `(firstY - y) / 12`, add
 
 Place the alternative within the logical width and within the current horizontal jump envelope. Keep `previousX` tied to the fixed primary platform so the existing safe route remains unchanged.
 
-- [ ] **Step 4: Run focused world tests and regression tests**
+- [x] **Step 4: Run focused world tests and regression tests**
 
 Run `npm test -- tests/world.test.js tests/model.test.js tests/simulation.test.js` and confirm the initial route and opening jump remain green.
 
-- [ ] **Step 5: Commit the paired-row generation**
+- [x] **Step 5: Commit the paired-row generation**
 
 ```powershell
 git add src/game/world.js tests/world.test.js
@@ -91,7 +91,7 @@ git commit -m "feat: guarantee safe paired canopy rows"
 - Consumes: `baseX`, `motionRange`, `motionPhase`, `motionSpeed` on `moving-leaf` platforms and moving sun entities.
 - Produces: updated `x` positions before landing and collection checks, with bounded deterministic motion.
 
-- [ ] **Step 1: Write the failing simulation tests**
+- [x] **Step 1: Write the failing simulation tests**
 
 Add tests for a moving platform and a moving sun:
 
@@ -130,21 +130,21 @@ test('moving sun drop updates before collection is resolved', () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused simulation test and verify RED**
+- [x] **Step 2: Run the focused simulation test and verify RED**
 
 Run `npm test -- tests/simulation.test.js`.
 
 Expected result: the new motion assertions fail because the simulation currently never advances `x` or phase for moving entities.
 
-- [ ] **Step 3: Implement bounded sinusoidal motion**
+- [x] **Step 3: Implement bounded sinusoidal motion**
 
 Add an `advanceMovingEntity` helper that increments `motionPhase` by `motionSpeed * safeDt`, computes `baseX + Math.sin(motionPhase) * motionRange`, and clamps the result to the logical stage. Apply it to moving platforms and sun drops before collision/collection. Preserve cracked-leaf collapse updates and existing event behavior.
 
-- [ ] **Step 4: Run focused and regression tests**
+- [x] **Step 4: Run focused and regression tests**
 
 Run `npm test -- tests/simulation.test.js tests/world.test.js tests/renderer.test.js` and confirm existing collapse, collection and renderer tests remain green.
 
-- [ ] **Step 5: Commit the simulation motion**
+- [x] **Step 5: Commit the simulation motion**
 
 ```powershell
 git add src/game/simulation.js tests/simulation.test.js
@@ -163,25 +163,25 @@ git commit -m "feat: move canopies and sun drops deterministically"
 - Consumes: the current `x` values and `kind: 'moving-leaf'` from the simulation snapshot.
 - Produces: subtle visual distinction for moving leaves and documented manual acceptance checks.
 
-- [ ] **Step 1: Write the failing renderer test**
+- [x] **Step 1: Write the failing renderer test**
 
 Add a test rendering a `moving-leaf` and assert that its fill/stroke palette differs from a normal `leaf` while retaining the same top-plane geometry.
 
-- [ ] **Step 2: Run the focused renderer test and verify RED**
+- [x] **Step 2: Run the focused renderer test and verify RED**
 
 Run `npm test -- tests/renderer.test.js`.
 
 Expected result: the moving leaf currently uses the normal green palette.
 
-- [ ] **Step 3: Implement the minimal moving-leaf visual cue**
+- [x] **Step 3: Implement the minimal moving-leaf visual cue**
 
 Use a slightly cooler green fill/stroke for `moving-leaf`; keep its geometry driven by the snapshot `x`, with no independent renderer-side motion.
 
-- [ ] **Step 4: Update README and QA**
+- [x] **Step 4: Update README and QA**
 
 Document the 30 m threshold, the fixed safe alternative, moving canopies and moving sun drops. Add manual checks for portrait play, choosing the fixed alternative after a cracked canopy collapses, watching a moving canopy stay within the stage and collecting a moving sun drop.
 
-- [ ] **Step 5: Run the complete verification set**
+- [x] **Step 5: Run the complete verification set**
 
 ```powershell
 npm test
@@ -192,11 +192,10 @@ git status --short
 
 Expected: all tests pass, build remains below 8 MB, and only intentional files are modified.
 
-- [ ] **Step 6: Commit and publish**
+- [x] **Step 6: Commit and publish**
 
 ```powershell
 git add src/render/canvas-renderer.js tests/renderer.test.js README.md docs/qa.md
 git commit -m "feat: add moving canopy visual feedback"
 git push origin main
 ```
-
