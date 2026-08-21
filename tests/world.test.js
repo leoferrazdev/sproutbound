@@ -25,12 +25,26 @@ test('extended world keeps the climb available beyond the first viewport', () =>
   const world = createWorld(5, { ...viewport, platformCount: 30 });
   const platforms = world.filter((entity) => entity.type === 'platform');
   const fragile = platforms.filter((platform) => platform.kind === 'cracked-leaf');
+  const rows = new Map();
 
-  assert.equal(platforms.length, 30);
+  for (const platform of platforms) {
+    const row = rows.get(platform.row) ?? [];
+    row.push(platform);
+    rows.set(platform.row, row);
+  }
+
+  const earlyRows = [...rows.values()].filter((row) => row[0].y >= 216);
+  const lateRows = [...rows.values()].filter((row) => row[0].y < 216);
+
+  assert.ok(platforms.length >= 30);
   assert.ok(platforms.at(-1).y < -1000);
   assert.ok(world.some((entity) => entity.type === 'thorn'));
   assert.ok(fragile.length > 0);
-  assert.equal(fragile.every((platform) => platforms.indexOf(platform) >= 6), true);
+  assert.ok(earlyRows.every((row) => row.every((platform) => platform.kind === 'leaf')));
+  assert.ok(lateRows.some((row) => row.some((platform) => platform.kind !== 'leaf')));
+  assert.equal(lateRows.every((row) => row.some((platform) => platform.kind === 'leaf')), true);
+  assert.equal(lateRows.every((row) => row.length >= 2), true);
+  assert.ok(lateRows.some((row) => row.some((platform) => platform.kind === 'moving-leaf')));
   assert.deepEqual(
     createWorld(5, { ...viewport, platformCount: 30 }),
     createWorld(5, { ...viewport, platformCount: 30 }),

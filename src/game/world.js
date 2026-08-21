@@ -33,30 +33,66 @@ export function createWorld(seed = 1, {
   for (let index = 0; index < totalPlatforms; index += 1) {
     const platformWidth = index === 0 ? previousWidth : 76 + Math.floor(random() * 37);
     const y = currentY;
+    const altitudeMeters = Math.floor((firstY - y) / 12);
     const drift = index === 0
       ? 0
       : (random() * 2 - 1) * (index <= 2 ? 30 : 90);
     const x = index === 0
       ? previousX
       : clamp(previousX + drift, 0, width - platformWidth);
-    const kind = extendedWorld && index >= 6 && index % 4 === 2
-      ? 'cracked-leaf'
-      : 'leaf';
-    const platform = createPlatform({ x, y, width: platformWidth, kind });
+    const platform = createPlatform({ x, y, width: platformWidth });
 
-    entities.push({ type: 'platform', ...platform });
+    entities.push({ type: 'platform', row: index, ...platform });
+
+    if (extendedWorld && altitudeMeters >= 30) {
+      const specialWidth = 70 + Math.floor(random() * 21);
+      const specialKind = index % 2 === 0 ? 'cracked-leaf' : 'moving-leaf';
+      const specialX = x < width / 2
+        ? clamp(x + platformWidth + 18, 0, width - specialWidth)
+        : clamp(x - specialWidth - 18, 0, width - specialWidth);
+      const special = createPlatform({
+        x: specialX,
+        y,
+        width: specialWidth,
+        kind: specialKind,
+      });
+
+      if (specialKind === 'moving-leaf') {
+        entities.push({
+          type: 'platform',
+          row: index,
+          ...special,
+          baseX: specialX,
+          motionRange: 24 + Math.floor(random() * 12),
+          motionPhase: random() * Math.PI * 2,
+          motionSpeed: 1.1 + random() * 0.5,
+        });
+      } else {
+        entities.push({ type: 'platform', row: index, ...special });
+      }
+    }
+
     previousX = x;
     previousWidth = platformWidth;
     currentY -= index < 3 ? 72 : 84;
 
     if (index >= 2 && index % 3 === 0) {
-      entities.push({
+      const sun = {
         type: 'sun',
         x: x + platformWidth / 2,
         y: y - 30,
         radius: 8,
         kind: 'sun',
-      });
+      };
+
+      if (extendedWorld && altitudeMeters >= 30) {
+        sun.baseX = sun.x;
+        sun.motionRange = 16 + Math.floor(random() * 10);
+        sun.motionPhase = random() * Math.PI * 2;
+        sun.motionSpeed = 1.25 + random() * 0.45;
+      }
+
+      entities.push(sun);
     }
 
     if (extendedWorld && index >= 7 && index % 3 === 1) {
