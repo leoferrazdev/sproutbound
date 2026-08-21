@@ -7,6 +7,7 @@ import { applyProgression } from './game/progression.js';
 import { createSafeStorage } from './storage.js';
 import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
+import { createPlatformAdapter } from './platform-adapter.js';
 
 function getBrowserStorage(documentRef) {
   try {
@@ -38,10 +39,12 @@ export function createApp(documentRef) {
   const simulation = { run: createRun(), stepRun };
   const safeStorage = createSafeStorage(getBrowserStorage(documentRef));
   let progress = safeStorage.load();
+  const platformAdapter = createPlatformAdapter();
   const hud = createHud(gameRoot);
   let loop;
   const screens = createScreens(gameRoot, {
-    onRestart: () => {
+    onRestart: async () => {
+      await platformAdapter.requestCommercialBreak();
       input.left = false;
       input.right = false;
       input.pointerX = null;
@@ -58,12 +61,16 @@ export function createApp(documentRef) {
     update(run, events) {
       hud.update(run);
       if (run.nextUnlock) hud.showObjective(`Próximo: ${run.nextUnlock.label}`);
+      if (events.includes('gameplayStarted')) {
+        void platformAdapter.startGameplay();
+      }
       if (events.includes('milestoneReached')) {
         const result = applyProgression(progress, { type: 'height', height: run.score });
         progress = result.progress;
         safeStorage.save(progress);
       }
       if (events.includes('playerDied')) {
+        void platformAdapter.stopGameplay();
         screens.showGameOver(run);
       } else if (run.state === 'playing') {
         screens.showPlaying();
@@ -94,6 +101,7 @@ export function createApp(documentRef) {
     renderer,
     simulation,
     loop,
+    platformAdapter,
   };
 }
 

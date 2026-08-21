@@ -20,7 +20,7 @@ export function stepRun(run, input = {}, dt) {
   let player = stepPlayer(startingPlayer, input, dt, WORLD_BOUNDS);
   let score = run.score;
   let nextUnlock = run.nextUnlock ?? getMilestone(score);
-  const events = [];
+  const events = started ? ['gameplayStarted'] : [];
 
   if (run.state !== 'ready' && player.vy > 0) {
     const previousBottom = previousPlayer.y + previousPlayer.height;
