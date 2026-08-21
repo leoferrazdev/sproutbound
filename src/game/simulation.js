@@ -95,8 +95,12 @@ export function stepRun(run, input = {}, dt) {
   let nextUnlock = run.nextUnlock ?? getMilestone(score);
   const events = [...platformState.events];
   if (started) events.push('gameplayStarted');
+  const hitHazardPlatform = platforms.some((platform) => (
+    platform.kind === 'thorn-leaf' && rectsOverlap(player, platform)
+  ));
+  if (hitHazardPlatform) events.push('hazardHit');
 
-  if (run.state !== 'ready' && player.vy > 0) {
+  if (!hitHazardPlatform && run.state !== 'ready' && player.vy > 0) {
     const previousBottom = previousPlayer.y + previousPlayer.height;
     const currentBottom = player.y + player.height;
     const platform = platforms.find((candidate) => {
@@ -154,7 +158,7 @@ export function stepRun(run, input = {}, dt) {
 
   const hitThorn = run.thorns.some((thorn) => rectsOverlap(player, thorn));
   const fell = player.y > (run.cameraY ?? 0) + 740;
-  const died = hitThorn || fell;
+  const died = hitHazardPlatform || hitThorn || fell;
   const nextPlayer = died ? { ...player, dead: true, grounded: false } : player;
   const nextRun = {
     ...run,
