@@ -9,8 +9,8 @@ function drawLeaf(ctx, platform, cameraY) {
 
   ctx.beginPath();
   ctx.moveTo(x, y + h);
-  ctx.quadraticCurveTo(x + w * 0.08, y - 4, x + w * 0.48, y + 2);
-  ctx.quadraticCurveTo(x + w * 0.88, y - 4, x + w, y + h);
+  ctx.quadraticCurveTo(x + w * 0.08, y, x + w * 0.48, y);
+  ctx.quadraticCurveTo(x + w * 0.88, y, x + w, y + h);
   ctx.quadraticCurveTo(x + w * 0.52, y + h + 9, x, y + h);
   ctx.closePath();
   ctx.fillStyle = '#79df8c';

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPlayer, rectsOverlap, stepPlayer } from '../src/game/player.js';
+import { createRun } from '../src/game/model.js';
 import { stepRun } from '../src/game/simulation.js';
 
 test('player steers horizontally and clamps to the viewport', async () => {
@@ -80,4 +81,18 @@ test('landing emits a milestone event and advances the next unlock', () => {
 
   assert.ok(result.events.includes('milestoneReached'));
   assert.equal(result.run.nextUnlock.id, 'bloom');
+});
+
+test('opening jump reaches the first target and aligns Pip feet with the leaf top', () => {
+  const initial = createRun(1);
+  const target = initial.platforms[1];
+  const direction = target.x < initial.player.x ? 'left' : 'right';
+  let result = stepRun(initial, { [direction]: true, primary: true }, 1 / 60);
+
+  for (let frame = 0; frame < 90 && !result.events.includes('landed'); frame += 1) {
+    result = stepRun(result.run, { [direction]: true }, 1 / 60);
+  }
+
+  assert.ok(result.events.includes('landed'));
+  assert.equal(result.run.player.y + result.run.player.height, target.y);
 });

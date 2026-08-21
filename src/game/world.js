@@ -20,11 +20,14 @@ export function createWorld(seed = 1, { width = 360, height = 640 } = {}) {
   const firstY = height - 64;
   let previousX = width / 2 - 48;
   let previousWidth = 96;
+  let currentY = firstY;
 
   for (let index = 0; index < platformCount; index += 1) {
     const platformWidth = index === 0 ? previousWidth : 76 + Math.floor(random() * 37);
-    const y = firstY - index * 96;
-    const drift = index === 0 ? 0 : (random() * 2 - 1) * 90;
+    const y = currentY;
+    const drift = index === 0
+      ? 0
+      : (random() * 2 - 1) * (index <= 2 ? 30 : 90);
     const x = index === 0
       ? previousX
       : clamp(previousX + drift, 0, width - platformWidth);
@@ -33,6 +36,7 @@ export function createWorld(seed = 1, { width = 360, height = 640 } = {}) {
     entities.push({ type: 'platform', ...platform });
     previousX = x;
     previousWidth = platformWidth;
+    currentY -= index < 3 ? 72 : 84;
 
     if (index >= 2 && index % 3 === 0) {
       entities.push({
