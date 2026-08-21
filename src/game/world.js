@@ -43,18 +43,29 @@ export function createWorld(seed = 1, {
     const platform = createPlatform({ x, y, width: platformWidth });
     let routeX = x;
     let routeWidth = platformWidth;
+    const hazardRow = extendedWorld && altitudeMeters >= 30
+      && index >= 8 && index % 6 === 4;
 
     if (extendedWorld && altitudeMeters >= 30) {
       const specialWidth = 70 + Math.floor(random() * 21);
-      const specialKind = index % 2 === 0 ? 'cracked-leaf' : 'moving-leaf';
 
-      if (specialKind === 'moving-leaf') {
+      if (hazardRow) {
+        entities.push({ type: 'platform', row: index, ...platform });
+        const specialX = x < width / 2
+          ? clamp(x + platformWidth + 18, 0, width - specialWidth)
+          : clamp(x - specialWidth - 18, 0, width - specialWidth);
+        entities.push({
+          type: 'platform',
+          row: index,
+          ...createPlatform({ x: specialX, y, width: specialWidth, kind: 'thorn-leaf' }),
+        });
+      } else if (index % 2 !== 0) {
         const movingX = clamp(x, 0, width - specialWidth);
         const special = createPlatform({
           x: movingX,
           y,
           width: specialWidth,
-          kind: specialKind,
+          kind: 'moving-leaf',
         });
         entities.push({
           type: 'platform',
@@ -75,7 +86,7 @@ export function createWorld(seed = 1, {
         entities.push({
           type: 'platform',
           row: index,
-          ...createPlatform({ x: specialX, y, width: specialWidth, kind: specialKind }),
+          ...createPlatform({ x: specialX, y, width: specialWidth, kind: 'cracked-leaf' }),
         });
       }
     } else {
@@ -105,16 +116,6 @@ export function createWorld(seed = 1, {
       entities.push(sun);
     }
 
-    if (extendedWorld && index >= 7 && index % 3 === 1) {
-      entities.push({
-        type: 'thorn',
-        x: clamp(routeX + routeWidth - 24, 0, width - 22),
-        y: y - 18,
-        width: 22,
-        height: 18,
-        kind: 'thorn',
-      });
-    }
   }
 
   return entities;
