@@ -1,6 +1,7 @@
 const LOGICAL_WIDTH = 360;
 const LOGICAL_HEIGHT = 640;
 const CRACKED_LEAF_COLLAPSE_SECONDS = 0.45;
+const FIXED_LEAF_IMPACT_SECONDS = 0.18;
 
 function drawLeaf(ctx, platform, cameraY) {
   const x = platform.x;
@@ -15,7 +16,11 @@ function drawLeaf(ctx, platform, cameraY) {
     ? Math.sin(collapseProgress * Math.PI * 5) * (1 - collapseProgress) * 3
     : 0;
   const drop = isCracked && platform.collapsing ? collapseProgress ** 2 * 26 : 0;
-  const y = platform.y - cameraY + wobble + drop;
+  const impactProgress = platform.kind === 'leaf' && platform.impactTime > 0
+    ? 1 - platform.impactTime / FIXED_LEAF_IMPACT_SECONDS
+    : 0;
+  const impactOffset = Math.sin(Math.max(0, Math.min(1, impactProgress)) * Math.PI) * 5;
+  const y = platform.y - cameraY + wobble + drop + impactOffset;
   const w = platform.width;
   const h = platform.height;
 

@@ -61,6 +61,42 @@ test('leaf visual top uses the same plane as Pip feet on landing', () => {
   assert.ok(context.quadratics.some(({ endY }) => endY === platform.y));
 });
 
+test('fixed leaf dips visually while Pip lands on it', () => {
+  const context = {
+    quadratics: [],
+    createLinearGradient: () => ({ addColorStop: () => {} }),
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    quadraticCurveTo: (controlX, controlY, endX, endY) => {
+      context.quadratics.push({ controlX, controlY, endX, endY });
+    },
+    closePath: () => {},
+    fill: () => {},
+    stroke: () => {},
+    fillRect: () => {},
+    clearRect: () => {},
+    setTransform: () => {},
+    arc: () => {},
+    ellipse: () => {},
+    save: () => {},
+    translate: () => {},
+    scale: () => {},
+    restore: () => {},
+  };
+  const canvas = { width: 360, height: 640, getContext: () => context };
+  const renderer = createCanvasRenderer(canvas);
+
+  renderer.render({
+    cameraY: 0,
+    platforms: [{ x: 100, y: 200, width: 80, height: 18, kind: 'leaf', impactTime: 0.09 }],
+    thorns: [],
+    sunDrops: [],
+  });
+
+  assert.ok(context.quadratics.some(({ endY }) => endY > 200 && endY < 210));
+});
+
 test('cracked leaf renders darker, cracked and displaced while collapsing', () => {
   const context = {
     quadratics: [],
