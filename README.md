@@ -33,6 +33,7 @@ Abra `http://localhost:8080` no navegador. O uso de servidor local evita as rest
 - Ao pousar em uma copa verde fixa, ela desce levemente e retorna em um impacto visual curto, sem alterar o plano de colisão ou o rebote.
 - Algumas faixas posteriores apresentam uma copa escura com espinhos ao lado de uma copa verde segura; qualquer contato com a copa perigosa encerra a tentativa.
 - Copas móveis e gotas de sol posteriores a 30 m oscilam lateralmente dentro do palco.
+- A rota atual termina em um cume explícito próximo de 249 m; alcançar o cume congela a rodada e desbloqueia a Coroa do cume.
 - Progresso usa `localStorage` apenas por meio de um adaptador com `try/catch`; falha de armazenamento não bloqueia o jogo.
 - O adaptador de plataforma é neutro: lifecycle idempotente, sem `window.PokiSDK`, sem `fetch` e sem SDK externo no build-base.
 

@@ -28,6 +28,8 @@ Servir a raiz do projeto com `python -m http.server 8080` e testar em `http://lo
 | Rota móvel preservada | Alcançar uma faixa móvel | A faixa móvel continua contendo somente uma copa móvel, sem copa perigosa adicional. |
 | Copa móvel | Observar uma copa especial posterior a 30 m | A copa oscila lateralmente dentro do palco e a colisão acompanha o movimento. |
 | Gota móvel | Tentar coletar uma gota posterior a 30 m | A gota oscila lateralmente e é coletada na posição em que aparece. |
+| Cume | Alcançar a altura máxima da rota | A partida congela em `Cume alcançado`, mostra a recompensa `Coroa do cume` e para o gameplay uma vez. |
+| Cume persistente | Alcançar o cume e iniciar uma nova rodada | A recompensa permanece desbloqueada quando o storage está disponível; falha de storage não congela o jogo. |
 | Game Over | Tocar uma copa com espinhos ou cair | Lifecycle para uma vez; tela informa altura, recorde e próximo desbloqueio. |
 | Restart | Clicar em `Jogar novamente` | Volta a Ready; a nova rodada espera o próximo input físico. |
 | Landscape | Redimensionar para paisagem | Stage 9:16 centralizado, sem esticar o mundo. |
