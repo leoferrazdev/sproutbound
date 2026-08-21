@@ -9,6 +9,7 @@ function drawLeaf(ctx, platform, cameraY) {
 
   const isCracked = platform.kind === 'cracked-leaf';
   const isMoving = platform.kind === 'moving-leaf';
+  const isThornLeaf = platform.kind === 'thorn-leaf';
   const collapseProgress = isCracked && platform.collapsing
     ? Math.max(0, Math.min(1, 1 - platform.collapseTime / CRACKED_LEAF_COLLAPSE_SECONDS))
     : 0;
@@ -32,11 +33,13 @@ function drawLeaf(ctx, platform, cameraY) {
   ctx.quadraticCurveTo(x + w * 0.88, y, x + w, y + h);
   ctx.quadraticCurveTo(x + w * 0.52, y + h + 9, x, y + h);
   ctx.closePath();
-  ctx.fillStyle = isCracked ? '#4f8f68' : (isMoving ? '#65c9a6' : '#79df8c');
+  ctx.fillStyle = isCracked
+    ? '#4f8f68'
+    : (isThornLeaf ? '#536b57' : (isMoving ? '#65c9a6' : '#79df8c'));
   ctx.fill();
   ctx.strokeStyle = isCracked
     ? '#a6d47e'
-    : (isMoving ? '#b6f5d0' : '#d5ff9c');
+    : (isThornLeaf ? '#d2e58b' : (isMoving ? '#b6f5d0' : '#d5ff9c'));
   ctx.lineWidth = 2;
   ctx.stroke();
 
@@ -52,23 +55,19 @@ function drawLeaf(ctx, platform, cameraY) {
     ctx.lineWidth = 2;
     ctx.stroke();
   }
+  if (isThornLeaf) {
+    ctx.beginPath();
+    for (let index = 0; index < 3; index += 1) {
+      const baseX = x + w * (0.16 + index * 0.28);
+      ctx.moveTo(baseX, y + 3);
+      ctx.lineTo(baseX + w * 0.08, y - 9);
+      ctx.lineTo(baseX + w * 0.16, y + 3);
+    }
+    ctx.strokeStyle = '#ffcf5a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
   ctx.restore();
-}
-
-function drawThorn(ctx, thorn, cameraY) {
-  const x = thorn.x;
-  const y = thorn.y - cameraY;
-
-  ctx.beginPath();
-  ctx.moveTo(x, y + thorn.height);
-  ctx.lineTo(x + thorn.width / 2, y);
-  ctx.lineTo(x + thorn.width, y + thorn.height);
-  ctx.closePath();
-  ctx.fillStyle = '#ff607f';
-  ctx.fill();
-  ctx.strokeStyle = '#ffd166';
-  ctx.lineWidth = 2;
-  ctx.stroke();
 }
 
 function drawSun(ctx, sun, cameraY) {
@@ -161,7 +160,6 @@ export function createCanvasRenderer(canvas) {
     drawBackground(context, snapshot.cameraY ?? 0);
 
     for (const platform of snapshot.platforms ?? []) drawLeaf(context, platform, snapshot.cameraY ?? 0);
-    for (const thorn of snapshot.thorns ?? []) drawThorn(context, thorn, snapshot.cameraY ?? 0);
     for (const sun of snapshot.sunDrops ?? []) drawSun(context, sun, snapshot.cameraY ?? 0);
     if (snapshot.player) drawPip(context, snapshot.player, snapshot.cameraY ?? 0);
 

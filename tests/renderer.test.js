@@ -217,3 +217,44 @@ test('moving leaf uses a distinct visual cue while preserving the top plane', ()
   assert.ok(context.fillStyles.includes('#65c9a6'));
   assert.ok(context.quadratics.some(({ endY }) => endY === 200));
 });
+
+test('thorn leaf renders a dark canopy with integrated spikes', () => {
+  const context = {
+    lines: [],
+    fillStyles: [],
+    createLinearGradient: () => ({ addColorStop: () => {} }),
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: (x, y) => {
+      context.lines.push({ x, y });
+    },
+    quadraticCurveTo: () => {},
+    closePath: () => {},
+    fill: () => {},
+    stroke: () => {},
+    fillRect: () => {},
+    clearRect: () => {},
+    setTransform: () => {},
+    arc: () => {},
+    ellipse: () => {},
+    save: () => {},
+    translate: () => {},
+    scale: () => {},
+    restore: () => {},
+    set fillStyle(value) {
+      this.fillStyles.push(value);
+    },
+  };
+  const canvas = { width: 360, height: 640, getContext: () => context };
+  const renderer = createCanvasRenderer(canvas);
+
+  renderer.render({
+    cameraY: 0,
+    platforms: [{ x: 100, y: 200, width: 80, height: 18, kind: 'thorn-leaf' }],
+    thorns: [],
+    sunDrops: [],
+  });
+
+  assert.ok(context.fillStyles.includes('#536b57'));
+  assert.ok(context.lines.length >= 6);
+});
