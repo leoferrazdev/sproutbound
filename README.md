@@ -29,6 +29,8 @@ Abra `http://localhost:8080` no navegador. O uso de servidor local evita as rest
 - Gotas de sol coletadas atualizam o contador de luz solar e são removidas da rodada uma única vez.
 - O percurso inicial já contém uma rota extensa de plataformas; a dificuldade e os espinhos entram mais acima.
 - Algumas folhas posteriores são rachadas: após o primeiro pouso, elas balançam, caem e deixam de existir como suporte.
+- Até 30 m, as copas são verdes e fixas; depois desse marco, cada faixa especial mantém uma copa fixa segura ao lado da alternativa rachada ou móvel.
+- Copas móveis e gotas de sol posteriores a 30 m oscilam lateralmente dentro do palco.
 - Progresso usa `localStorage` apenas por meio de um adaptador com `try/catch`; falha de armazenamento não bloqueia o jogo.
 - O adaptador de plataforma é neutro: lifecycle idempotente, sem `window.PokiSDK`, sem `fetch` e sem SDK externo no build-base.
 

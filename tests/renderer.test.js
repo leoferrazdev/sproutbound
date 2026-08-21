@@ -140,3 +140,44 @@ test('collapsed leaf is no longer rendered', () => {
 
   assert.equal(context.quadratics.length, 0);
 });
+
+test('moving leaf uses a distinct visual cue while preserving the top plane', () => {
+  const context = {
+    quadratics: [],
+    fillStyles: [],
+    createLinearGradient: () => ({ addColorStop: () => {} }),
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    quadraticCurveTo: (controlX, controlY, endX, endY) => {
+      context.quadratics.push({ controlX, controlY, endX, endY });
+    },
+    closePath: () => {},
+    fill: () => {},
+    stroke: () => {},
+    fillRect: () => {},
+    clearRect: () => {},
+    setTransform: () => {},
+    arc: () => {},
+    ellipse: () => {},
+    save: () => {},
+    translate: () => {},
+    scale: () => {},
+    restore: () => {},
+    set fillStyle(value) {
+      this.fillStyles.push(value);
+    },
+  };
+  const canvas = { width: 360, height: 640, getContext: () => context };
+  const renderer = createCanvasRenderer(canvas);
+
+  renderer.render({
+    cameraY: 0,
+    platforms: [{ x: 100, y: 200, width: 80, height: 18, kind: 'moving-leaf' }],
+    thorns: [],
+    sunDrops: [],
+  });
+
+  assert.ok(context.fillStyles.includes('#65c9a6'));
+  assert.ok(context.quadratics.some(({ endY }) => endY === 200));
+});

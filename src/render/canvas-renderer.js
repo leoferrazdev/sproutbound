@@ -7,6 +7,7 @@ function drawLeaf(ctx, platform, cameraY) {
   if (platform.collapsed) return;
 
   const isCracked = platform.kind === 'cracked-leaf';
+  const isMoving = platform.kind === 'moving-leaf';
   const collapseProgress = isCracked && platform.collapsing
     ? Math.max(0, Math.min(1, 1 - platform.collapseTime / CRACKED_LEAF_COLLAPSE_SECONDS))
     : 0;
@@ -26,9 +27,11 @@ function drawLeaf(ctx, platform, cameraY) {
   ctx.quadraticCurveTo(x + w * 0.88, y, x + w, y + h);
   ctx.quadraticCurveTo(x + w * 0.52, y + h + 9, x, y + h);
   ctx.closePath();
-  ctx.fillStyle = isCracked ? '#4f8f68' : '#79df8c';
+  ctx.fillStyle = isCracked ? '#4f8f68' : (isMoving ? '#65c9a6' : '#79df8c');
   ctx.fill();
-  ctx.strokeStyle = isCracked ? '#a6d47e' : '#d5ff9c';
+  ctx.strokeStyle = isCracked
+    ? '#a6d47e'
+    : (isMoving ? '#b6f5d0' : '#d5ff9c');
   ctx.lineWidth = 2;
   ctx.stroke();
 
