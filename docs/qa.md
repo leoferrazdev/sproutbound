@@ -24,9 +24,11 @@ Servir a raiz do projeto com `python -m http.server 8080` e testar em `http://lo
 | Queda da copa | Observar a copa rachada por cerca de meio segundo | A copa desce, perde opacidade e desaparece sem interromper o rebote do Pip. |
 | Rota após 30 m | Alcançar uma faixa especial rachada e uma faixa móvel | A faixa rachada oferece uma copa verde fixa além da rachada; a faixa móvel apresenta somente uma copa móvel. |
 | Impacto da copa fixa | Pousar em uma copa verde normal | A copa desce levemente e retorna sem alterar o rebote ou o plano de colisão. |
+| Copa com espinhos | Alcançar uma faixa perigosa após 30 m | A faixa contém uma copa segura e uma copa escura com espinhos; tocar a copa perigosa encerra a rodada. |
+| Rota móvel preservada | Alcançar uma faixa móvel | A faixa móvel continua contendo somente uma copa móvel, sem copa perigosa adicional. |
 | Copa móvel | Observar uma copa especial posterior a 30 m | A copa oscila lateralmente dentro do palco e a colisão acompanha o movimento. |
 | Gota móvel | Tentar coletar uma gota posterior a 30 m | A gota oscila lateralmente e é coletada na posição em que aparece. |
-| Game Over | Colidir com espinho ou cair | Lifecycle para uma vez; tela informa altura, recorde e próximo desbloqueio. |
+| Game Over | Tocar uma copa com espinhos ou cair | Lifecycle para uma vez; tela informa altura, recorde e próximo desbloqueio. |
 | Restart | Clicar em `Jogar novamente` | Volta a Ready; a nova rodada espera o próximo input físico. |
 | Landscape | Redimensionar para paisagem | Stage 9:16 centralizado, sem esticar o mundo. |
 | Teclado | Tab até o botão e ativar com Enter/Space | Botão tem foco visível e reinicia somente pela ação explícita. |

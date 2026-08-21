@@ -31,6 +31,7 @@ Abra `http://localhost:8080` no navegador. O uso de servidor local evita as rest
 - Algumas folhas posteriores são rachadas: após o primeiro pouso, elas balançam, caem e deixam de existir como suporte.
 - Até 30 m, as copas são verdes e fixas. Depois desse marco, faixas rachadas mantêm uma copa fixa segura ao lado da alternativa; faixas móveis apresentam somente uma copa móvel.
 - Ao pousar em uma copa verde fixa, ela desce levemente e retorna em um impacto visual curto, sem alterar o plano de colisão ou o rebote.
+- Algumas faixas posteriores apresentam uma copa escura com espinhos ao lado de uma copa verde segura; qualquer contato com a copa perigosa encerra a tentativa.
 - Copas móveis e gotas de sol posteriores a 30 m oscilam lateralmente dentro do palco.
 - Progresso usa `localStorage` apenas por meio de um adaptador com `try/catch`; falha de armazenamento não bloqueia o jogo.
 - O adaptador de plataforma é neutro: lifecycle idempotente, sem `window.PokiSDK`, sem `fetch` e sem SDK externo no build-base.
