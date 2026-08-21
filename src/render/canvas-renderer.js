@@ -1,23 +1,50 @@
 const LOGICAL_WIDTH = 360;
 const LOGICAL_HEIGHT = 640;
+const CRACKED_LEAF_COLLAPSE_SECONDS = 0.45;
 
 function drawLeaf(ctx, platform, cameraY) {
   const x = platform.x;
-  const y = platform.y - cameraY;
+  if (platform.collapsed) return;
+
+  const isCracked = platform.kind === 'cracked-leaf';
+  const collapseProgress = isCracked && platform.collapsing
+    ? Math.max(0, Math.min(1, 1 - platform.collapseTime / CRACKED_LEAF_COLLAPSE_SECONDS))
+    : 0;
+  const wobble = isCracked && platform.collapsing
+    ? Math.sin(collapseProgress * Math.PI * 5) * (1 - collapseProgress) * 3
+    : 0;
+  const drop = isCracked && platform.collapsing ? collapseProgress ** 2 * 26 : 0;
+  const y = platform.y - cameraY + wobble + drop;
   const w = platform.width;
   const h = platform.height;
 
+  ctx.save();
+  if (isCracked && platform.collapsing) ctx.globalAlpha = 1 - collapseProgress * 0.72;
   ctx.beginPath();
   ctx.moveTo(x, y + h);
   ctx.quadraticCurveTo(x + w * 0.08, y, x + w * 0.48, y);
   ctx.quadraticCurveTo(x + w * 0.88, y, x + w, y + h);
   ctx.quadraticCurveTo(x + w * 0.52, y + h + 9, x, y + h);
   ctx.closePath();
-  ctx.fillStyle = '#79df8c';
+  ctx.fillStyle = isCracked ? '#4f8f68' : '#79df8c';
   ctx.fill();
-  ctx.strokeStyle = '#d5ff9c';
+  ctx.strokeStyle = isCracked ? '#a6d47e' : '#d5ff9c';
   ctx.lineWidth = 2;
   ctx.stroke();
+
+  if (isCracked) {
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.28, y + h * 0.24);
+    ctx.lineTo(x + w * 0.38, y + h * 0.58);
+    ctx.lineTo(x + w * 0.32, y + h * 0.86);
+    ctx.moveTo(x + w * 0.63, y + h * 0.2);
+    ctx.lineTo(x + w * 0.54, y + h * 0.5);
+    ctx.lineTo(x + w * 0.68, y + h * 0.78);
+    ctx.strokeStyle = '#1f5146';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawThorn(ctx, thorn, cameraY) {

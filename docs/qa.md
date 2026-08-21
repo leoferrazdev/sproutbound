@@ -20,6 +20,8 @@ Servir a raiz do projeto com `python -m http.server 8080` e testar em `http://lo
 | Aterrissagem | Alcançar uma folha | Pip rebate automaticamente; a altura reflete a posição vertical máxima, não a quantidade de pulos. |
 | Gota de sol | Cruzar uma gota com Pip | A gota desaparece, o contador `Luz solar` aumenta uma unidade e a mesma gota não é contada novamente. |
 | Subida longa | Continuar após a primeira tela | Ainda existem plataformas válidas; espinhos aparecem somente após a faixa inicial segura. |
+| Copa rachada | Alcançar uma folha escura e rachada | A copa balança, começa a cair e não aceita um segundo pouso. |
+| Queda da copa | Observar a copa rachada por cerca de meio segundo | A copa desce, perde opacidade e desaparece sem interromper o rebote do Pip. |
 | Game Over | Colidir com espinho ou cair | Lifecycle para uma vez; tela informa altura, recorde e próximo desbloqueio. |
 | Restart | Clicar em `Jogar novamente` | Volta a Ready; a nova rodada espera o próximo input físico. |
 | Landscape | Redimensionar para paisagem | Stage 9:16 centralizado, sem esticar o mundo. |

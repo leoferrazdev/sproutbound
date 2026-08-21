@@ -19,6 +19,95 @@ test('canvas renderer exposes resize and render without requiring a 2D context',
 test('leaf visual top uses the same plane as Pip feet on landing', () => {
   const context = {
     quadratics: [],
+    lines: [],
+    fillStyles: [],
+    createLinearGradient: () => ({ addColorStop: () => {} }),
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: (x, y) => {
+      context.lines.push({ x, y });
+    },
+    quadraticCurveTo: (controlX, controlY, endX, endY) => {
+      context.quadratics.push({ controlX, controlY, endX, endY });
+    },
+    closePath: () => {},
+    fill: () => {},
+    stroke: () => {},
+    fillRect: () => {},
+    clearRect: () => {},
+    setTransform: () => {},
+    arc: () => {},
+    ellipse: () => {},
+    save: () => {},
+    translate: () => {},
+    scale: () => {},
+    restore: () => {},
+    set fillStyle(value) {
+      this.fillStyles.push(value);
+    },
+  };
+  const canvas = { width: 360, height: 640, getContext: () => context };
+  const renderer = createCanvasRenderer(canvas);
+  const platform = { x: 100, y: 200, width: 80, height: 18, kind: 'leaf' };
+
+  renderer.render({
+    cameraY: 0,
+    platforms: [platform],
+    thorns: [],
+    sunDrops: [],
+    player: { x: 127, y: 166, width: 26, height: 34, dead: false, grounded: false },
+  });
+
+  assert.ok(context.quadratics.some(({ endY }) => endY === platform.y));
+});
+
+test('cracked leaf renders darker, cracked and displaced while collapsing', () => {
+  const context = {
+    quadratics: [],
+    lines: [],
+    fillStyles: [],
+    createLinearGradient: () => ({ addColorStop: () => {} }),
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: (x, y) => {
+      context.lines.push({ x, y });
+    },
+    quadraticCurveTo: (controlX, controlY, endX, endY) => {
+      context.quadratics.push({ controlX, controlY, endX, endY });
+    },
+    closePath: () => {},
+    fill: () => {},
+    stroke: () => {},
+    fillRect: () => {},
+    clearRect: () => {},
+    setTransform: () => {},
+    arc: () => {},
+    ellipse: () => {},
+    save: () => {},
+    translate: () => {},
+    scale: () => {},
+    restore: () => {},
+    set fillStyle(value) {
+      this.fillStyles.push(value);
+    },
+  };
+  const canvas = { width: 360, height: 640, getContext: () => context };
+  const renderer = createCanvasRenderer(canvas);
+  const platform = {
+    x: 100, y: 200, width: 80, height: 18, kind: 'cracked-leaf',
+    collapsing: true, collapseTime: 0.2,
+  };
+
+  renderer.render({ cameraY: 0, platforms: [platform], thorns: [], sunDrops: [] });
+
+  assert.ok(context.fillStyles.includes('#4f8f68'));
+  assert.ok(context.lines.length >= 2);
+  assert.ok(context.quadratics.some(({ endY }) => endY > platform.y));
+});
+
+test('collapsed leaf is no longer rendered', () => {
+  const context = {
+    quadratics: [],
     createLinearGradient: () => ({ addColorStop: () => {} }),
     beginPath: () => {},
     moveTo: () => {},
@@ -41,15 +130,13 @@ test('leaf visual top uses the same plane as Pip feet on landing', () => {
   };
   const canvas = { width: 360, height: 640, getContext: () => context };
   const renderer = createCanvasRenderer(canvas);
-  const platform = { x: 100, y: 200, width: 80, height: 18, kind: 'leaf' };
 
   renderer.render({
     cameraY: 0,
-    platforms: [platform],
+    platforms: [{ x: 100, y: 200, width: 80, height: 18, kind: 'cracked-leaf', collapsed: true }],
     thorns: [],
     sunDrops: [],
-    player: { x: 127, y: 166, width: 26, height: 34, dead: false, grounded: false },
   });
 
-  assert.ok(context.quadratics.some(({ endY }) => endY === platform.y));
+  assert.equal(context.quadratics.length, 0);
 });
