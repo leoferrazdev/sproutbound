@@ -127,6 +127,51 @@ test('height is measured from the highest world position instead of landings', (
   assert.equal(result.run.bestScore, 20);
 });
 
+test('cracked leaf bounces once and immediately loses collision', () => {
+  const run = {
+    state: 'playing',
+    score: 0,
+    bestScore: 0,
+    startY: 206,
+    cameraY: 0,
+    player: { ...createPlayer({ x: 80, y: 80 }), grounded: false, vy: 220 },
+    platforms: [{ x: 60, y: 120, width: 100, height: 18, kind: 'cracked-leaf' }],
+    thorns: [],
+    sunDrops: [],
+  };
+
+  const first = stepRun(run, {}, 0.2);
+  const second = stepRun(first.run, {}, 0.01);
+
+  assert.ok(first.events.includes('landed'));
+  assert.ok(first.events.includes('platformTriggered'));
+  assert.equal(first.run.platforms[0].collapsing, true);
+  assert.equal(second.events.includes('landed'), false);
+});
+
+test('collapsing cracked leaf expires and becomes collapsed state', () => {
+  const run = {
+    state: 'playing',
+    score: 0,
+    bestScore: 0,
+    startY: 206,
+    cameraY: 0,
+    player: { ...createPlayer({ x: 80, y: 80 }), grounded: false, vy: 220 },
+    platforms: [{ x: 60, y: 120, width: 100, height: 18, kind: 'cracked-leaf' }],
+    thorns: [],
+    sunDrops: [],
+  };
+
+  let result = stepRun(run, {}, 0.2);
+  for (let frame = 0; frame < 20 && !result.run.platforms[0].collapsed; frame += 1) {
+    result = stepRun(result.run, {}, 1 / 30);
+  }
+
+  assert.ok(result.events.includes('platformCollapsed'));
+  assert.equal(result.run.platforms[0].collapsed, true);
+  assert.equal(result.run.platforms[0].collapseTime, 0);
+});
+
 test('opening jump reaches the first target and aligns Pip feet with the leaf top', () => {
   const initial = createRun(1);
   const target = initial.platforms[1];

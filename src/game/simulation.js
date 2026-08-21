@@ -3,6 +3,7 @@ import { getMilestone } from './progression.js';
 
 const WORLD_BOUNDS = { width: 360, height: 640 };
 export const HEIGHT_PIXELS_PER_METER = 12;
+export const CRACKED_LEAF_COLLAPSE_SECONDS = 0.45;
 
 function circleOverlapsRect(circle, rect) {
   const closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.width));
@@ -10,6 +11,29 @@ function circleOverlapsRect(circle, rect) {
   const distanceX = circle.x - closestX;
   const distanceY = circle.y - closestY;
   return distanceX * distanceX + distanceY * distanceY <= circle.radius * circle.radius;
+}
+
+function advancePlatforms(platforms, dt) {
+  const safeDt = Math.min(Math.max(dt, 0), 1 / 30);
+  const events = [];
+  const nextPlatforms = platforms.map((platform) => {
+    if (!platform.collapsing) return platform;
+
+    const collapseTime = Math.max(0, platform.collapseTime - safeDt);
+    if (collapseTime > 0) {
+      return { ...platform, collapseTime };
+    }
+
+    events.push('platformCollapsed');
+    return {
+      ...platform,
+      collapsing: false,
+      collapsed: true,
+      collapseTime: 0,
+    };
+  });
+
+  return { platforms: nextPlatforms, events };
 }
 
 export function stepRun(run, input = {}, dt) {
@@ -27,17 +51,21 @@ export function stepRun(run, input = {}, dt) {
     ? { ...previousPlayer, grounded: false, vy: PLAYER_BOUNCE }
     : previousPlayer;
   let player = stepPlayer(startingPlayer, input, dt, WORLD_BOUNDS);
+  const platformState = advancePlatforms(run.platforms ?? [], dt);
+  let platforms = platformState.platforms;
   let score = run.score ?? 0;
   const startY = Number.isFinite(run.startY) ? run.startY : previousPlayer.y;
   let sunCount = run.sunCount ?? 0;
   let sunDrops = run.sunDrops ?? [];
   let nextUnlock = run.nextUnlock ?? getMilestone(score);
-  const events = started ? ['gameplayStarted'] : [];
+  const events = [...platformState.events];
+  if (started) events.push('gameplayStarted');
 
   if (run.state !== 'ready' && player.vy > 0) {
     const previousBottom = previousPlayer.y + previousPlayer.height;
     const currentBottom = player.y + player.height;
-    const platform = run.platforms.find((candidate) => {
+    const platform = platforms.find((candidate) => {
+      if (candidate.collapsing || candidate.collapsed) return false;
       const horizontallyAligned = player.x < candidate.x + candidate.width
         && player.x + player.width > candidate.x;
       return horizontallyAligned
@@ -53,6 +81,18 @@ export function stepRun(run, input = {}, dt) {
         grounded: false,
       };
       events.push('landed');
+
+      if (platform.kind === 'cracked-leaf') {
+        platforms = platforms.map((candidate) => candidate === platform
+          ? {
+            ...candidate,
+            collapsing: true,
+            collapsed: false,
+            collapseTime: CRACKED_LEAF_COLLAPSE_SECONDS,
+          }
+          : candidate);
+        events.push('platformTriggered');
+      }
     }
   }
 
@@ -84,6 +124,7 @@ export function stepRun(run, input = {}, dt) {
     startY,
     sunCount,
     sunDrops,
+    platforms,
     player: nextPlayer,
     nextUnlock,
   };
