@@ -13,20 +13,42 @@ function circleOverlapsRect(circle, rect) {
   return distanceX * distanceX + distanceY * distanceY <= circle.radius * circle.radius;
 }
 
+function advanceMovingEntity(entity, safeDt) {
+  if (!Number.isFinite(entity.motionSpeed)) return entity;
+
+  const motionPhase = (entity.motionPhase ?? 0) + entity.motionSpeed * safeDt;
+  const baseX = entity.baseX ?? entity.x;
+  const rawX = baseX + Math.sin(motionPhase) * (entity.motionRange ?? 0);
+  const halfSize = entity.radius ?? 0;
+  const minX = halfSize;
+  const maxX = Number.isFinite(entity.width)
+    ? WORLD_BOUNDS.width - entity.width
+    : WORLD_BOUNDS.width - halfSize;
+
+  return {
+    ...entity,
+    x: Math.max(minX, Math.min(maxX, rawX)),
+    motionPhase,
+  };
+}
+
 function advancePlatforms(platforms, dt) {
   const safeDt = Math.min(Math.max(dt, 0), 1 / 30);
   const events = [];
   const nextPlatforms = platforms.map((platform) => {
-    if (!platform.collapsing) return platform;
+    const moved = platform.kind === 'moving-leaf'
+      ? advanceMovingEntity(platform, safeDt)
+      : platform;
+    if (!moved.collapsing) return moved;
 
-    const collapseTime = Math.max(0, platform.collapseTime - safeDt);
+    const collapseTime = Math.max(0, moved.collapseTime - safeDt);
     if (collapseTime > 0) {
-      return { ...platform, collapseTime };
+      return { ...moved, collapseTime };
     }
 
     events.push('platformCollapsed');
     return {
-      ...platform,
+      ...moved,
       collapsing: false,
       collapsed: true,
       collapseTime: 0,
@@ -34,6 +56,11 @@ function advancePlatforms(platforms, dt) {
   });
 
   return { platforms: nextPlatforms, events };
+}
+
+function advanceSunDrops(sunDrops, dt) {
+  const safeDt = Math.min(Math.max(dt, 0), 1 / 30);
+  return sunDrops.map((sun) => advanceMovingEntity(sun, safeDt));
 }
 
 export function stepRun(run, input = {}, dt) {
@@ -53,10 +80,11 @@ export function stepRun(run, input = {}, dt) {
   let player = stepPlayer(startingPlayer, input, dt, WORLD_BOUNDS);
   const platformState = advancePlatforms(run.platforms ?? [], dt);
   let platforms = platformState.platforms;
+  const sunState = advanceSunDrops(run.sunDrops ?? [], dt);
   let score = run.score ?? 0;
   const startY = Number.isFinite(run.startY) ? run.startY : previousPlayer.y;
   let sunCount = run.sunCount ?? 0;
-  let sunDrops = run.sunDrops ?? [];
+  let sunDrops = sunState;
   let nextUnlock = run.nextUnlock ?? getMilestone(score);
   const events = [...platformState.events];
   if (started) events.push('gameplayStarted');

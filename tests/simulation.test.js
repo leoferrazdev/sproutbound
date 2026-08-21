@@ -172,6 +172,66 @@ test('collapsing cracked leaf expires and becomes collapsed state', () => {
   assert.equal(result.run.platforms[0].collapseTime, 0);
 });
 
+test('moving canopy advances inside the logical stage before collision', () => {
+  const run = {
+    state: 'playing',
+    score: 0,
+    bestScore: 0,
+    startY: 206,
+    cameraY: 0,
+    player: { ...createPlayer({ x: 80, y: 80 }), grounded: false, vy: 220 },
+    platforms: [{
+      x: 80,
+      y: 120,
+      width: 90,
+      height: 18,
+      kind: 'moving-leaf',
+      row: 6,
+      baseX: 80,
+      motionRange: 40,
+      motionPhase: 0,
+      motionSpeed: 2,
+    }],
+    thorns: [],
+    sunDrops: [],
+  };
+
+  const result = stepRun(run, {}, 1 / 30);
+
+  assert.notEqual(result.run.platforms[0].x, 80);
+  assert.ok(result.run.platforms[0].x >= 0);
+  assert.ok(result.run.platforms[0].x + result.run.platforms[0].width <= 360);
+});
+
+test('moving sun drop updates before collection is resolved', () => {
+  const run = {
+    state: 'playing',
+    score: 40,
+    bestScore: 40,
+    startY: 542,
+    cameraY: 0,
+    player: { ...createPlayer({ x: 112, y: 300 }), grounded: false, vy: 0 },
+    platforms: [],
+    thorns: [],
+    sunDrops: [{
+      type: 'sun',
+      x: 100,
+      y: 318,
+      radius: 8,
+      kind: 'sun',
+      baseX: 100,
+      motionRange: 20,
+      motionPhase: Math.PI / 2 - 2 / 30,
+      motionSpeed: 2,
+    }],
+  };
+
+  const result = stepRun(run, {}, 1 / 30);
+
+  assert.equal(result.run.sunDrops.length, 0);
+  assert.equal(result.run.sunCount, 1);
+});
+
 test('opening jump reaches the first target and aligns Pip feet with the leaf top', () => {
   const initial = createRun(1);
   const target = initial.platforms[1];
