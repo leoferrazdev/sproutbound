@@ -1,5 +1,8 @@
 import { createRun } from './game/model.js';
+import { createGameLoop } from './game/game-loop.js';
 import { bindInput, createInputState } from './input.js';
+import { stepRun } from './game/simulation.js';
+import { createCanvasRenderer } from './render/canvas-renderer.js';
 
 export function createApp(documentRef) {
   const gameRoot = documentRef.querySelector('#game');
@@ -19,12 +22,27 @@ export function createApp(documentRef) {
   canvas.height = 640;
   const input = createInputState();
   const unbindInput = bindInput(canvas, input);
+  const renderer = createCanvasRenderer(canvas);
+  const simulation = { run: createRun(), stepRun };
+  const resize = () => renderer.resize({
+    width: canvas.clientWidth || 360,
+    height: canvas.clientHeight || 640,
+    dpr: documentRef.defaultView?.devicePixelRatio || 1,
+  });
+  resize();
+  renderer.render(simulation.run);
+  const loop = createGameLoop({ canvas, simulation, renderer, input });
+  documentRef.defaultView?.addEventListener('resize', resize);
+  loop.start();
   return {
     gameRoot,
     canvas,
-    run: createRun(),
+    run: simulation.run,
     input,
     unbindInput,
+    renderer,
+    simulation,
+    loop,
   };
 }
 

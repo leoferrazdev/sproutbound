@@ -1,5 +1,8 @@
 import { readInput } from '../input.js';
 
+const LOGICAL_WIDTH = 360;
+const LOGICAL_HEIGHT = 640;
+
 export function advanceCamera(run, viewportHeight) {
   const current = run.cameraY ?? 0;
   const target = run.player.y - viewportHeight * 0.36;
@@ -18,7 +21,7 @@ export function createGameLoop({ canvas, simulation, renderer, ui, input }) {
     if (!running) return;
     const elapsed = lastTime === 0 ? 0 : Math.min((time - lastTime) / 1000, 1 / 15);
     lastTime = time;
-    const axis = readInput(input, canvas.width || 360).axis;
+    const axis = readInput(input, LOGICAL_WIDTH).axis;
     const result = simulation.stepRun(simulation.run, {
       left: axis < 0,
       right: axis > 0,
@@ -26,7 +29,7 @@ export function createGameLoop({ canvas, simulation, renderer, ui, input }) {
     }, elapsed);
     simulation.run = {
       ...result.run,
-      cameraY: advanceCamera(result.run, canvas.height || 640),
+      cameraY: advanceCamera(result.run, LOGICAL_HEIGHT),
     };
     renderer?.render(simulation.run);
     ui?.update(simulation.run, result.events);

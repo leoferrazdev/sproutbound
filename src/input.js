@@ -4,6 +4,7 @@ const KEY_DIRECTIONS = new Map([
   ['ArrowRight', 'right'],
   ['KeyD', 'right'],
 ]);
+const LOGICAL_WIDTH = 360;
 
 export function createInputState() {
   return {
@@ -25,7 +26,8 @@ function pointerPosition(target, event) {
   const rect = typeof target.getBoundingClientRect === 'function'
     ? target.getBoundingClientRect()
     : { left: 0 };
-  return event.clientX - rect.left;
+  const cssWidth = rect.width || LOGICAL_WIDTH;
+  return ((event.clientX - rect.left) / cssWidth) * LOGICAL_WIDTH;
 }
 
 export function bindInput(target, state) {
