@@ -12,21 +12,24 @@ export function createPlatform({ x, y, width, kind = 'leaf' }) {
 }
 
 export function createRun(seed = 1) {
-  const entities = createWorld(seed, { width: 360, height: 640 });
+  const entities = createWorld(seed, { width: 360, height: 640, platformCount: 36 });
   const platforms = entities
     .filter((entity) => entity.type === 'platform')
     .map(({ type, ...platform }) => platform);
   const thorns = entities.filter((entity) => entity.type === 'thorn');
   const sunDrops = entities.filter((entity) => entity.type === 'sun');
   const firstPlatform = platforms[0];
+  const startY = firstPlatform.y - 34;
 
   return {
     state: 'ready',
     score: 0,
     bestScore: 0,
+    startY,
+    sunCount: 0,
     player: {
       x: firstPlatform.x + firstPlatform.width / 2 - 13,
-      y: firstPlatform.y - 34,
+      y: startY,
       vx: 0,
       vy: 0,
       width: 26,

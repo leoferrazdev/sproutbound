@@ -17,7 +17,9 @@ Servir a raiz do projeto com `python -m http.server 8080` e testar em `http://lo
 | Ready portrait | Abrir em viewport móvel portrait | Pip, HUD e instrução ficam legíveis; o cartão Ready não bloqueia o primeiro toque. |
 | Primeiro input | Tocar à esquerda/direita ou pressionar A/D | A rodada começa; nenhum clique em texto/menu inicia por acidente. |
 | Steering | Alternar lados durante a queda | Pip acompanha os dois lados sem sair do palco. |
-| Aterrissagem | Alcançar uma folha | Pip rebate automaticamente e a altura sobe. |
+| Aterrissagem | Alcançar uma folha | Pip rebate automaticamente; a altura reflete a posição vertical máxima, não a quantidade de pulos. |
+| Gota de sol | Cruzar uma gota com Pip | A gota desaparece, o contador `Luz solar` aumenta uma unidade e a mesma gota não é contada novamente. |
+| Subida longa | Continuar após a primeira tela | Ainda existem plataformas válidas; espinhos aparecem somente após a faixa inicial segura. |
 | Game Over | Colidir com espinho ou cair | Lifecycle para uma vez; tela informa altura, recorde e próximo desbloqueio. |
 | Restart | Clicar em `Jogar novamente` | Volta a Ready; a nova rodada espera o próximo input físico. |
 | Landscape | Redimensionar para paisagem | Stage 9:16 centralizado, sem esticar o mundo. |

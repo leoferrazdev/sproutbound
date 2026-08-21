@@ -112,6 +112,16 @@ canvas {
   text-align: center;
 }
 
+.sun-counter {
+  grid-column: 1 / -1;
+  margin: -2px auto 0;
+  color: #ffd166;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+  text-shadow: 0 1px 12px rgb(255 209 102 / 45%);
+}
+
 .screens {
   display: grid;
   place-items: center;

@@ -25,7 +25,9 @@ Abra `http://localhost:8080` no navegador. O uso de servidor local evita as rest
 
 - Stage lógico fixo de 360×640, proporção 9:16, contido em retrato e centralizado em paisagem.
 - Folhas iniciais seguras e sem espinhos; o perigo aparece depois da leitura inicial.
-- Aterrissagens geram altura, marcos visuais e próximos objetivos.
+- A altura é medida pelo ponto mais alto alcançado no mundo, em metros; pousos não são contados como pontos.
+- Gotas de sol coletadas atualizam o contador de luz solar e são removidas da rodada uma única vez.
+- O percurso inicial já contém uma rota extensa de plataformas; a dificuldade e os espinhos entram mais acima.
 - Progresso usa `localStorage` apenas por meio de um adaptador com `try/catch`; falha de armazenamento não bloqueia o jogo.
 - O adaptador de plataforma é neutro: lifecycle idempotente, sem `window.PokiSDK`, sem `fetch` e sem SDK externo no build-base.
 

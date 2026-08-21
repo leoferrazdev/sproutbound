@@ -13,16 +13,24 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-export function createWorld(seed = 1, { width = 360, height = 640 } = {}) {
+export function createWorld(seed = 1, {
+  width = 360,
+  height = 640,
+  platformCount,
+} = {}) {
   const random = createRandom(seed);
   const entities = [];
-  const platformCount = Math.max(4, Math.ceil(height / 96) + 2);
+  const defaultPlatformCount = Math.max(4, Math.ceil(height / 96) + 2);
+  const totalPlatforms = Number.isInteger(platformCount)
+    ? Math.max(defaultPlatformCount, platformCount)
+    : defaultPlatformCount;
+  const extendedWorld = totalPlatforms > defaultPlatformCount;
   const firstY = height - 64;
   let previousX = width / 2 - 48;
   let previousWidth = 96;
   let currentY = firstY;
 
-  for (let index = 0; index < platformCount; index += 1) {
+  for (let index = 0; index < totalPlatforms; index += 1) {
     const platformWidth = index === 0 ? previousWidth : 76 + Math.floor(random() * 37);
     const y = currentY;
     const drift = index === 0
@@ -48,7 +56,7 @@ export function createWorld(seed = 1, { width = 360, height = 640 } = {}) {
       });
     }
 
-    if (height > 640 && index >= 4 && index % 3 === 0) {
+    if (extendedWorld && index >= 7 && index % 3 === 1) {
       entities.push({
         type: 'thorn',
         x: clamp(x + platformWidth - 24, 0, width - 22),

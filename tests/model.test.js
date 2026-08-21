@@ -10,9 +10,11 @@ test('new run starts ready with a player and safe starting platform', () => {
   assert.equal(run.bestScore, 0);
   assert.equal(run.player.dead, false);
   assert.equal(run.platforms.length > 0, true);
-  assert.equal(run.thorns.length, 0);
+  assert.equal(run.thorns.every((thorn) => thorn.y < 200), true);
   assert.equal(run.sunDrops.length >= 0, true);
   assert.equal(run.nextUnlock.id, 'bud');
+  assert.equal(run.sunCount, 0);
+  assert.equal(run.platforms.length >= 24, true);
 });
 
 test('platform constructor applies the stable leaf shape', () => {

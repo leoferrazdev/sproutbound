@@ -20,3 +20,12 @@ test('initial world keeps early platforms readable and hazard-free', () => {
   assert.equal(Math.min(...earlyPlatforms.map((platform) => platform.x)) >= 0, true);
   assert.equal(earlyPlatforms.every((platform, index) => index === 0 || platform.y < earlyPlatforms[index - 1].y), true);
 });
+
+test('extended world keeps the climb available beyond the first viewport', () => {
+  const world = createWorld(5, { ...viewport, platformCount: 30 });
+  const platforms = world.filter((entity) => entity.type === 'platform');
+
+  assert.equal(platforms.length, 30);
+  assert.ok(platforms.at(-1).y < -1000);
+  assert.ok(world.some((entity) => entity.type === 'thorn'));
+});
