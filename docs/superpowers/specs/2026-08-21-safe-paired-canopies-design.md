@@ -6,6 +6,8 @@ created: 2026-08-21
 project: sproutbound
 ---
 
+> **Status vigente:** esta especificação foi substituída por [Copa móvel única por faixa e impacto de copa fixa](2026-08-21-single-moving-canopy-impact-design.md). A regra atual mantém a copa fixa nas faixas rachadas, mas usa somente uma copa móvel nas faixas móveis.
+
 # Rotas seguras e entidades móveis
 
 ## Decisão

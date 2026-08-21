@@ -22,7 +22,8 @@ Servir a raiz do projeto com `python -m http.server 8080` e testar em `http://lo
 | Subida longa | Continuar após a primeira tela | Ainda existem plataformas válidas; espinhos aparecem somente após a faixa inicial segura. |
 | Copa rachada | Alcançar uma folha escura e rachada | A copa balança, começa a cair e não aceita um segundo pouso. |
 | Queda da copa | Observar a copa rachada por cerca de meio segundo | A copa desce, perde opacidade e desaparece sem interromper o rebote do Pip. |
-| Rota segura após 30 m | Alcançar uma faixa com copa especial | A faixa oferece uma copa verde fixa além da alternativa rachada ou móvel. |
+| Rota após 30 m | Alcançar uma faixa especial rachada e uma faixa móvel | A faixa rachada oferece uma copa verde fixa além da rachada; a faixa móvel apresenta somente uma copa móvel. |
+| Impacto da copa fixa | Pousar em uma copa verde normal | A copa desce levemente e retorna sem alterar o rebote ou o plano de colisão. |
 | Copa móvel | Observar uma copa especial posterior a 30 m | A copa oscila lateralmente dentro do palco e a colisão acompanha o movimento. |
 | Gota móvel | Tentar coletar uma gota posterior a 30 m | A gota oscila lateralmente e é coletada na posição em que aparece. |
 | Game Over | Colidir com espinho ou cair | Lifecycle para uma vez; tela informa altura, recorde e próximo desbloqueio. |
