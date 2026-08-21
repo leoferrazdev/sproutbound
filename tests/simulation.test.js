@@ -86,6 +86,32 @@ test('thorn canopy ends the run without bouncing Pip', () => {
   assert.equal(result.run.player.vy < 0, false);
 });
 
+test('reaching the summit ends the climb without a death', () => {
+  const run = {
+    state: 'playing',
+    score: 9,
+    bestScore: 9,
+    startY: 206,
+    summitHeight: 10,
+    summitReached: false,
+    cameraY: 0,
+    player: { ...createPlayer({ x: 80, y: 80 }), grounded: false, vy: 0 },
+    platforms: [],
+    thorns: [],
+    sunDrops: [],
+  };
+
+  const result = stepRun(run, {}, 0);
+  const repeated = stepRun(result.run, {}, 1);
+
+  assert.ok(result.events.includes('summitReached'));
+  assert.equal(result.events.includes('playerDied'), false);
+  assert.equal(result.run.state, 'summit');
+  assert.equal(result.run.summitReached, true);
+  assert.deepEqual(repeated.events, []);
+  assert.deepEqual(repeated.run, result.run);
+});
+
 test('thorn collision and falling emit one playerDied event', () => {
   const run = {
     state: 'playing',

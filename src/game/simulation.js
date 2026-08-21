@@ -75,6 +75,10 @@ export function stepRun(run, input = {}, dt) {
     return { run, events: [] };
   }
 
+  if (run.state === 'summit') {
+    return { run, events: [] };
+  }
+
   if (run.state === 'ready' && !input.primary) {
     return { run, events: [] };
   }
@@ -156,16 +160,22 @@ export function stepRun(run, input = {}, dt) {
     nextUnlock = getMilestone(score);
   }
 
+  const reachedSummit = !run.summitReached
+    && Number.isFinite(run.summitHeight)
+    && score >= run.summitHeight;
+  if (reachedSummit) events.push('summitReached');
+
   const hitThorn = run.thorns.some((thorn) => rectsOverlap(player, thorn));
   const fell = player.y > (run.cameraY ?? 0) + 740;
   const died = hitHazardPlatform || hitThorn || fell;
   const nextPlayer = died ? { ...player, dead: true, grounded: false } : player;
   const nextRun = {
     ...run,
-    state: died ? 'gameOver' : (started ? 'playing' : run.state),
+    state: died ? 'gameOver' : (reachedSummit ? 'summit' : (started ? 'playing' : run.state)),
     score,
     bestScore: Math.max(run.bestScore ?? 0, score),
     startY,
+    summitReached: Boolean(run.summitReached || reachedSummit),
     sunCount,
     sunDrops,
     platforms,
