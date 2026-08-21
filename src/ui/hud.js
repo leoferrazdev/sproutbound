@@ -12,6 +12,7 @@ export function createHud(root) {
     if (sunCounter) sunCounter.textContent = `Luz solar: ${Math.max(0, run.sunCount ?? 0)}`;
     if (run.state === 'playing') pauseState.textContent = 'Jogo em andamento';
     if (run.state === 'ready') pauseState.textContent = 'Jogo pronto';
+    if (run.state === 'summit') pauseState.textContent = 'Cume alcançado';
   };
   const showObjective = (text) => {
     objective.textContent = text;

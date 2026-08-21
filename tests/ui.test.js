@@ -8,11 +8,24 @@ const cssPath = new URL('../styles.css', import.meta.url);
 test('shell exposes accessible HUD, objective, pause state and explicit restart', async () => {
   const html = await readFile(indexPath, 'utf8');
 
-  for (const id of ['hud', 'height-value', 'record-value', 'objective', 'pause-state', 'screens', 'restart-button']) {
+  for (const id of [
+    'hud',
+    'height-value',
+    'record-value',
+    'objective',
+    'pause-state',
+    'screens',
+    'ending-eyebrow',
+    'ending-title',
+    'ending-message',
+    'restart-button',
+  ]) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
   assert.match(html, /aria-label=["'][^"']*(altura|record|pausa|reiniciar|jogar novamente)/i);
   assert.match(html, /Jogar novamente/);
+  assert.match(html, /Cume alcançado/);
+  assert.match(html, /Coroa do cume/);
 });
 
 test('responsive shell keeps portrait aspect ratio and safe-area behavior', async () => {

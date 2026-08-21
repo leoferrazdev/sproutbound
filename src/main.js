@@ -70,7 +70,11 @@ export function createApp(documentRef) {
         progress = result.progress;
         safeStorage.save(progress);
       }
-      if (events.includes('playerDied')) {
+      if (events.includes('summitReached')) {
+        void platformAdapter.stopGameplay();
+        screens.showSummit(run);
+        hud.showObjective('Cume alcançado');
+      } else if (events.includes('playerDied')) {
         void platformAdapter.stopGameplay();
         screens.showGameOver(run);
       } else if (run.state === 'playing') {
