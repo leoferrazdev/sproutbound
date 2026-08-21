@@ -1,0 +1,68 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #d9f6ad;
+  color: #183529;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100svh;
+  overflow: hidden;
+  background: #d9f6ad;
+  overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
+}
+
+button,
+canvas {
+  -webkit-tap-highlight-color: transparent;
+}
+
+#game {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.stage-shell {
+  position: relative;
+  display: grid;
+  width: min(100vw, 56.25svh);
+  height: min(100svh, 177.78vw);
+  min-width: 240px;
+  min-height: 426px;
+  overflow: hidden;
+  place-items: center;
+  background: #d9f6ad;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+@media (orientation: landscape) {
+  #game {
+    background: #b9df96;
+  }
+
+  .stage-shell {
+    box-shadow: 0 0 0 2px rgb(24 53 41 / 12%), 0 20px 60px rgb(24 53 41 / 18%);
+  }
+}
