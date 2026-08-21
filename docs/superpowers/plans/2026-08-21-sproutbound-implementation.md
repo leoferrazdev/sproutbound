@@ -46,6 +46,8 @@ src/ui/screens.js                    Ready, Game Over and restart screens
 tests/model.test.js                  Entity and run invariants
 tests/world.test.js                  Deterministic world generation
 tests/simulation.test.js             Bounce, collision, score and failure rules
+tests/renderer.test.js                Canvas renderer contract
+tests/ui.test.js                      HUD and screen accessibility contract
 tests/progression.test.js            Milestones and storage failure behavior
 tests/platform-adapter.test.js       Lifecycle contract and no-duplication rules
 tests/build.test.js                  Release audit and bundle-size guard
@@ -229,6 +231,7 @@ git commit -m "feat: add responsive input and game loop"
 
 **Files:**
 - Create: `src/render/canvas-renderer.js`
+- Create: `tests/renderer.test.js`
 - Modify: `src/game/game-loop.js`
 - Modify: `src/main.js`
 
@@ -313,6 +316,7 @@ git commit -m "feat: add visual growth progression and safe save"
 **Files:**
 - Create: `src/ui/hud.js`
 - Create: `src/ui/screens.js`
+- Create: `tests/ui.test.js`
 - Modify: `index.html`
 - Modify: `styles.css`
 - Modify: `src/main.js`
