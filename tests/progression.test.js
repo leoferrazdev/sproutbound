@@ -12,6 +12,20 @@ test('first visual milestone is reachable and exposes the next objective', () =>
   assert.equal(afterFirst.id, 'bloom');
 });
 
+test('summit reward becomes the next objective after the initial visual milestones', () => {
+  const summit = getMilestone(60);
+
+  assert.equal(summit.id, 'summit-crown');
+  assert.equal(summit.label, 'Coroa do cume');
+});
+
+test('reaching the summit unlocks the persistent summit reward', () => {
+  const result = applyProgression(createDefaultProgress(), { type: 'height', height: 240 });
+
+  assert.ok(result.unlocked.includes('summit-crown'));
+  assert.ok(result.progress.unlocked.includes('summit-crown'));
+});
+
 test('progression unlocks a milestone once and ignores duplicates', () => {
   const initial = createDefaultProgress();
   const first = applyProgression(initial, { type: 'height', height: 10 });

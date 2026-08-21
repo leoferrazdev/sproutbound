@@ -20,12 +20,16 @@ export function createRun(seed = 1) {
   const sunDrops = entities.filter((entity) => entity.type === 'sun');
   const firstPlatform = platforms[0];
   const startY = firstPlatform.y - 34;
+  const lastPlatform = platforms.at(-1);
+  const summitHeight = Math.floor((startY - lastPlatform.y) / 12) + 1;
 
   return {
     state: 'ready',
     score: 0,
     bestScore: 0,
     startY,
+    summitHeight,
+    summitReached: false,
     sunCount: 0,
     player: {
       x: firstPlatform.x + firstPlatform.width / 2 - 13,

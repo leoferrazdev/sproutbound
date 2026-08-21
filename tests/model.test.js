@@ -15,6 +15,10 @@ test('new run starts ready with a player and safe starting platform', () => {
   assert.equal(run.nextUnlock.id, 'bud');
   assert.equal(run.sunCount, 0);
   assert.equal(run.platforms.length >= 24, true);
+  const lastPlatform = run.platforms.at(-1);
+  const expectedSummitHeight = Math.floor((run.startY - lastPlatform.y) / 12) + 1;
+  assert.equal(run.summitHeight, expectedSummitHeight);
+  assert.ok(run.summitHeight > 200);
 });
 
 test('platform constructor applies the stable leaf shape', () => {
