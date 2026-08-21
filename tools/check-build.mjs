@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { join, relative, resolve } from 'node:path';
 
-const projectRoot = resolve(import.meta.dirname, '..');
 const ignoredDirectories = new Set(['.git', 'node_modules', 'tests']);
 const releaseExtensions = new Set(['.css', '.html', '.js', '.json', '.svg']);
 const maxBytes = 8 * 1024 * 1024;
@@ -23,31 +23,41 @@ async function collectFiles(directory) {
   return files;
 }
 
-const files = await collectFiles(projectRoot);
-let totalBytes = 0;
-const violations = [];
+export async function auditBuild(projectRoot) {
+  const root = resolve(projectRoot);
+  const files = await collectFiles(root);
+  let totalBytes = 0;
+  const violations = [];
 
-for (const file of files) {
-  const metadata = await stat(file);
-  totalBytes += metadata.size;
-  const content = await readFile(file, 'utf8');
-  const displayPath = relative(projectRoot, file);
+  for (const file of files) {
+    const metadata = await stat(file);
+    totalBytes += metadata.size;
+    const content = await readFile(file, 'utf8');
+    const displayPath = relative(root, file);
 
-  if (/https?:\/\//i.test(content)) {
-    violations.push(`${displayPath}: external URL reference`);
+    if (/https?:\/\//i.test(content)) {
+      violations.push(`${displayPath}: external URL reference`);
+    }
+    if (/\bconsole\.log\s*\(/.test(content)) {
+      violations.push(`${displayPath}: console.log is not allowed in release files`);
+    }
   }
-  if (/\bconsole\.log\s*\(/.test(content)) {
-    violations.push(`${displayPath}: console.log is not allowed in release files`);
+
+  if (totalBytes > maxBytes) {
+    violations.push(`release files total ${totalBytes} bytes; limit is ${maxBytes} bytes`);
   }
+
+  return { ok: violations.length === 0, files, totalBytes, violations };
 }
 
-if (totalBytes > maxBytes) {
-  violations.push(`release files total ${totalBytes} bytes; limit is ${maxBytes} bytes`);
-}
-
-if (violations.length > 0) {
-  process.stderr.write(`${violations.join('\n')}\n`);
-  process.exitCode = 1;
-} else {
-  process.stdout.write(`Build audit passed: ${files.length} files, ${totalBytes} bytes.\n`);
+const isMainModule = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+if (isMainModule) {
+  const projectRoot = resolve(import.meta.dirname, '..');
+  const result = await auditBuild(projectRoot);
+  if (!result.ok) {
+    process.stderr.write(`${result.violations.join('\n')}\n`);
+    process.exitCode = 1;
+  } else {
+    process.stdout.write(`Build audit passed: ${result.files.length} files, ${result.totalBytes} bytes.\n`);
+  }
 }
