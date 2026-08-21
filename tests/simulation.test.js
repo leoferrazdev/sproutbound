@@ -62,3 +62,22 @@ test('thorn collision and falling emit one playerDied event', () => {
 test('rect overlap treats touching edges as non-overlap', () => {
   assert.equal(rectsOverlap({ x: 0, y: 0, width: 10, height: 10 }, { x: 10, y: 0, width: 10, height: 10 }), false);
 });
+
+test('landing emits a milestone event and advances the next unlock', () => {
+  const run = {
+    state: 'playing',
+    score: 9,
+    bestScore: 9,
+    cameraY: 0,
+    nextUnlock: { id: 'bud', height: 10, label: 'Broto com duas folhas' },
+    player: { ...createPlayer({ x: 80, y: 80 }), grounded: false, vy: 220 },
+    platforms: [{ x: 60, y: 120, width: 100, height: 18, kind: 'leaf' }],
+    thorns: [],
+    sunDrops: [],
+  };
+
+  const result = stepRun(run, {}, 0.2);
+
+  assert.ok(result.events.includes('milestoneReached'));
+  assert.equal(result.run.nextUnlock.id, 'bloom');
+});

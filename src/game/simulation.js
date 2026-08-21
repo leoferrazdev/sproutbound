@@ -1,4 +1,5 @@
 import { PLAYER_BOUNCE, rectsOverlap, stepPlayer } from './player.js';
+import { getMilestone } from './progression.js';
 
 const WORLD_BOUNDS = { width: 360, height: 640 };
 
@@ -18,6 +19,7 @@ export function stepRun(run, input = {}, dt) {
     : previousPlayer;
   let player = stepPlayer(startingPlayer, input, dt, WORLD_BOUNDS);
   let score = run.score;
+  let nextUnlock = run.nextUnlock ?? getMilestone(score);
   const events = [];
 
   if (run.state !== 'ready' && player.vy > 0) {
@@ -40,6 +42,10 @@ export function stepRun(run, input = {}, dt) {
       };
       score += 1;
       events.push('landed');
+      if (nextUnlock && score >= nextUnlock.height) {
+        events.push('milestoneReached');
+        nextUnlock = getMilestone(score);
+      }
     }
   }
 
@@ -53,6 +59,7 @@ export function stepRun(run, input = {}, dt) {
     score,
     bestScore: Math.max(run.bestScore ?? 0, score),
     player: nextPlayer,
+    nextUnlock,
   };
 
   if (died) {

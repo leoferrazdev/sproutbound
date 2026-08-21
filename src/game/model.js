@@ -1,4 +1,5 @@
 import { createWorld } from './world.js';
+import { getMilestone } from './progression.js';
 
 export function createPlatform({ x, y, width, kind = 'leaf' }) {
   return {
@@ -37,10 +38,6 @@ export function createRun(seed = 1) {
     thorns,
     sunDrops,
     cameraY: 0,
-    nextUnlock: {
-      id: 'bud',
-      height: 25,
-      label: 'Broto com duas folhas',
-    },
+    nextUnlock: getMilestone(0),
   };
 }
