@@ -8,6 +8,7 @@ import { createSafeStorage } from './storage.js';
 import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
 import { createPlatformAdapter } from './platform-adapter.js';
+import { createTranslator } from './i18n.js';
 
 function getBrowserStorage(documentRef) {
   try {
@@ -33,6 +34,11 @@ export function createApp(documentRef) {
 
   canvas.width = 360;
   canvas.height = 640;
+  const translator = createTranslator(documentRef.defaultView?.navigator?.language);
+  documentRef.documentElement.lang = translator.locale === 'pt' ? 'pt-BR' : 'en';
+  documentRef.title = translator.t('title');
+  gameRoot.setAttribute('aria-label', translator.t('game'));
+  canvas.setAttribute('aria-label', translator.t('canvas'));
   const input = createInputState();
   const unbindInput = bindInput(canvas, input);
   const renderer = createCanvasRenderer(canvas);
@@ -40,9 +46,10 @@ export function createApp(documentRef) {
   const safeStorage = createSafeStorage(getBrowserStorage(documentRef));
   let progress = safeStorage.load();
   const platformAdapter = createPlatformAdapter();
-  const hud = createHud(gameRoot);
+  const hud = createHud(gameRoot, translator);
   let loop;
   const screens = createScreens(gameRoot, {
+    translator,
     onRestart: async () => {
       await platformAdapter.requestCommercialBreak();
       input.left = false;
@@ -52,7 +59,7 @@ export function createApp(documentRef) {
       input.pressed = false;
       simulation.run = createRun();
       hud.update(simulation.run);
-      hud.showObjective(`Próximo: ${simulation.run.nextUnlock.label}`);
+      hud.showNextObjective(simulation.run.nextUnlock);
       screens.showReady();
       renderer.render(simulation.run);
       loop.resume();
@@ -61,7 +68,7 @@ export function createApp(documentRef) {
   const ui = {
     update(run, events) {
       hud.update(run);
-      if (run.nextUnlock) hud.showObjective(`Próximo: ${run.nextUnlock.label}`);
+      if (run.nextUnlock) hud.showNextObjective(run.nextUnlock);
       if (events.includes('gameplayStarted')) {
         void platformAdapter.startGameplay();
       }
@@ -73,7 +80,7 @@ export function createApp(documentRef) {
       if (events.includes('summitReached')) {
         void platformAdapter.stopGameplay();
         screens.showSummit(run);
-        hud.showObjective('Cume alcançado');
+        hud.showObjective(translator.t('objective.summit'));
       } else if (events.includes('playerDied')) {
         void platformAdapter.stopGameplay();
         screens.showGameOver(run);
@@ -92,7 +99,7 @@ export function createApp(documentRef) {
   resize();
   renderer.render(simulation.run);
   hud.update(simulation.run);
-  hud.showObjective(`Próximo: ${simulation.run.nextUnlock.label}`);
+  hud.showNextObjective(simulation.run.nextUnlock);
   screens.showReady();
   loop = createGameLoop({ canvas, simulation, renderer, ui, input });
   documentRef.defaultView?.addEventListener('resize', resize);

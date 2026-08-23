@@ -22,10 +22,10 @@ test('shell exposes accessible HUD, objective, pause state and explicit restart'
   ]) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
-  assert.match(html, /aria-label=["'][^"']*(altura|record|pausa|reiniciar|jogar novamente)/i);
-  assert.match(html, /Jogar novamente/);
-  assert.match(html, /Cume alcançado/);
-  assert.match(html, /Coroa do cume/);
+  assert.match(html, /aria-label=["'][^"']*(height|best|game|start|end)/i);
+  assert.match(html, /Play again/);
+  assert.match(html, /RUN OVER/);
+  assert.match(html, /Next: Two-leaf sprout/);
 });
 
 test('responsive shell keeps portrait aspect ratio and safe-area behavior', async () => {

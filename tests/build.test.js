@@ -1,15 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { auditBuild } from '../tools/check-build.mjs';
 
 async function withFixture(files, callback) {
   const root = await mkdtemp(join(tmpdir(), 'sproutbound-audit-'));
   try {
     for (const [name, content] of Object.entries(files)) {
-      await writeFile(join(root, name), content);
+      const path = join(root, name);
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, content);
     }
     return await callback(root);
   } finally {
@@ -34,4 +36,12 @@ test('release audit catches a bundle over 8 MB', async () => {
 
   assert.equal(result.ok, false);
   assert.match(result.violations[0], /8 MB|limit/i);
+});
+
+test('release audit ignores submission media sources', async () => {
+  const result = await withFixture({
+    'media/covers/source.svg': '<svg xmlns="http://www.w3.org/2000/svg" />',
+  }, (root) => auditBuild(root));
+
+  assert.equal(result.ok, true);
 });

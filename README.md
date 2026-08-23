@@ -1,47 +1,48 @@
-# Sproutbound — Salto ao Sol
+# Sproutbound — Sunbound climb
 
-MVP vertical de arcade para navegador. Pip é um pequeno broto que salta automaticamente entre folhas, coleta gotas de sol e sobe até encontrar espinhos. A referência estrutural é um jogo de ascensão em retrato; os diferenciais são personagem próprio, progressão visual e tema de copa ensolarada.
+An English-first vertical arcade MVP for web browsers. Pip is a small sprout that automatically bounces between leaves, collects solar drops, and climbs toward the summit. Portuguese remains available automatically when the browser locale starts with `pt-`; unsupported locales fall back to English.
 
-## Rodar localmente
+## Run locally
 
-O projeto não usa dependências de runtime, CDN, fontes externas, analytics ou requests HTTP.
+The project has no runtime dependencies, CDN, external fonts, analytics, or HTTP requests from the game runtime.
 
 ```powershell
 cd D:\LEONARDO\Games\sproutbound
 python -m http.server 8080
 ```
 
-Abra `http://localhost:8080` no navegador. O uso de servidor local evita as restrições de módulos ES quando o arquivo é aberto diretamente.
+Open `http://localhost:8080` in a browser. A local server is required because the game uses ES modules.
 
-## Controles
+## Controls
 
-- Toque/clique na metade esquerda ou direita do palco: guia Pip.
-- `A` / `←`: esquerda.
-- `D` / `→`: direita.
-- O primeiro input físico inicia a rodada.
-- Após Game Over, somente `Jogar novamente` reinicia a rodada.
+- Tap/click the left or right half of the stage to guide Pip.
+- `A` / `←`: move left.
+- `D` / `→`: move right.
+- The first physical input starts the run.
+- After Game Over, only `Play again` starts a new run.
 
-## Regras do MVP
+## MVP rules
 
-- Stage lógico fixo de 360×640, proporção 9:16, contido em retrato e centralizado em paisagem.
-- Folhas iniciais seguras e sem espinhos; o perigo aparece depois da leitura inicial.
-- A altura é medida pelo ponto mais alto alcançado no mundo, em metros; pousos não são contados como pontos.
-- Gotas de sol coletadas atualizam o contador de luz solar e são removidas da rodada uma única vez.
-- O percurso inicial já contém uma rota extensa de plataformas; a dificuldade e os espinhos entram mais acima.
-- Algumas folhas posteriores são rachadas: após o primeiro pouso, elas balançam, caem e deixam de existir como suporte.
-- Até 30 m, as copas são verdes e fixas. Depois desse marco, faixas rachadas mantêm uma copa fixa segura ao lado da alternativa; faixas móveis apresentam somente uma copa móvel.
-- Ao pousar em uma copa verde fixa, ela desce levemente e retorna em um impacto visual curto, sem alterar o plano de colisão ou o rebote.
-- Algumas faixas posteriores apresentam uma copa escura com espinhos ao lado de uma copa verde segura; qualquer contato com a copa perigosa encerra a tentativa.
-- Copas móveis e gotas de sol posteriores a 30 m oscilam lateralmente dentro do palco.
-- A rota atual termina em um cume explícito próximo de 249 m; alcançar o cume congela a rodada e desbloqueia a Coroa do cume.
-- Progresso usa `localStorage` apenas por meio de um adaptador com `try/catch`; falha de armazenamento não bloqueia o jogo.
-- O adaptador de plataforma é neutro: lifecycle idempotente, sem `window.PokiSDK`, sem `fetch` e sem SDK externo no build-base.
+- Fixed logical stage of 360×640, 9:16 portrait ratio, centered inside landscape viewports.
+- Early leaves are safe and thorn-free so the first interaction is readable.
+- Height is measured from the highest world position reached in metres; landings are not counted as points.
+- Collected solar drops update the solar counter and disappear once per run.
+- The route ends at an explicit summit near 249 m; reaching it freezes the run and unlocks Summit Crown.
+- Later leaves may crack, move, dip on impact, or carry integrated thorns.
+- Progress is persisted through a `try/catch` storage adapter; blocked storage never freezes the game.
+- The platform adapter is neutral and idempotent. It contains no external SDK, `fetch`, or platform request in the base build.
 
-## Validação
+## CrazyGames readiness
+
+- Basic Launch: the local HTML5 build is eligible for submission without the CrazyGames SDK.
+- Full Launch: requires replacing the neutral adapter with the real CrazyGames SDK integration, including gameplay lifecycle events and monetization rules.
+- Submission media is in [`media/covers`](media/covers), with preparation notes in [`media/README.md`](media/README.md).
+
+## Validation
 
 ```powershell
 npm test
 npm run check:build
 ```
 
-O build auditado rejeita URLs externas, `console.log` em arquivos de release e qualquer total acima de 8 MB. A rodada visual manual está documentada em [docs/qa.md](docs/qa.md).
+The build audit rejects external URLs, `console.log` in release files, and any total above 8 MB. Manual gameplay checks are documented in [`docs/qa.md`](docs/qa.md).

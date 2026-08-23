@@ -16,7 +16,7 @@ test('summit reward becomes the next objective after the initial visual mileston
   const summit = getMilestone(60);
 
   assert.equal(summit.id, 'summit-crown');
-  assert.equal(summit.label, 'Coroa do cume');
+  assert.equal(summit.label, 'Summit Crown');
 });
 
 test('reaching the summit unlocks the persistent summit reward', () => {

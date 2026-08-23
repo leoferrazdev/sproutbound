@@ -1,5 +1,7 @@
 # Matriz de QA — Sproutbound
 
+The release language baseline is English. When the browser locale starts with `pt-`, the game keeps the Portuguese experience; unsupported locales fall back to English.
+
 ## Automatizado
 
 - [x] `npm test`: modelo, mundo determinístico, física, input, renderer, progressão, storage, UI, lifecycle e auditoria.

@@ -1,8 +1,8 @@
 const MILESTONES = [
-  { id: 'bud', height: 10, label: 'Broto com duas folhas', accent: '#b9f46b' },
-  { id: 'bloom', height: 25, label: 'Pip florescente', accent: '#ff9ac2' },
-  { id: 'sun-cape', height: 60, label: 'Capa de luz solar', accent: '#ffd166' },
-  { id: 'summit-crown', height: 240, label: 'Coroa do cume', accent: '#b9f46b' },
+  { id: 'bud', height: 10, label: 'Two-leaf sprout', accent: '#b9f46b' },
+  { id: 'bloom', height: 25, label: 'Blooming Pip', accent: '#ff9ac2' },
+  { id: 'sun-cape', height: 60, label: 'Solar cape', accent: '#ffd166' },
+  { id: 'summit-crown', height: 240, label: 'Summit Crown', accent: '#b9f46b' },
 ];
 
 export function createDefaultProgress() {

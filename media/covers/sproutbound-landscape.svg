@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071a31"/>
+      <stop offset="0.55" stop-color="#123e4b"/>
+      <stop offset="1" stop-color="#174f3e"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="35%" r="55%">
+      <stop offset="0" stop-color="#fff1a8" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#ffd166" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b9f46b"/>
+      <stop offset="1" stop-color="#49b97a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+  <circle cx="970" cy="300" r="470" fill="url(#sun)"/>
+  <path d="M0 900 C250 760 420 850 640 760 S1060 790 1250 700 S1640 770 1920 620 V1080 H0Z" fill="#0b2935" opacity=".72"/>
+  <g fill="url(#leaf)" stroke="#e3ff93" stroke-width="12">
+    <path d="M190 800 Q350 680 510 800 Q350 840 190 800Z"/>
+    <path d="M1350 770 Q1510 650 1670 770 Q1510 810 1350 770Z"/>
+    <path d="M650 570 Q830 430 1010 570 Q830 615 650 570Z"/>
+    <path d="M1030 950 Q1230 790 1430 950 Q1230 1000 1030 950Z"/>
+  </g>
+  <g transform="translate(905 350)">
+    <ellipse cx="105" cy="160" rx="105" ry="132" fill="#88df83" stroke="#eaff9e" stroke-width="12"/>
+    <ellipse cx="55" cy="22" rx="58" ry="30" fill="#b9f46b" transform="rotate(-22 55 22)"/>
+    <ellipse cx="155" cy="22" rx="58" ry="30" fill="#b9f46b" transform="rotate(22 155 22)"/>
+    <circle cx="72" cy="150" r="14" fill="#092b3a"/>
+    <circle cx="138" cy="150" r="14" fill="#092b3a"/>
+    <path d="M78 207 Q105 228 132 207" fill="none" stroke="#092b3a" stroke-width="10" stroke-linecap="round"/>
+    <path d="M0 285 Q105 335 210 285" fill="none" stroke="#ffd166" stroke-width="18" stroke-linecap="round"/>
+  </g>
+  <text x="960" y="150" text-anchor="middle" fill="#fff7cf" font-family="Arial, sans-serif" font-size="112" font-weight="800" letter-spacing="8">SPROUTBOUND</text>
+</svg>
