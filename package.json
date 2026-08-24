@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check:build": "node tools/check-build.mjs"
+    "check:build": "node tools/check-build.mjs",
+    "build:gamedistribution": "node tools/build-gamedistribution.mjs"
   }
 }

@@ -2,7 +2,7 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join, relative, resolve } from 'node:path';
 
-const ignoredDirectories = new Set(['.git', 'node_modules', 'tests', 'media']);
+const ignoredDirectories = new Set(['.git', 'node_modules', 'tests', 'media', 'submission']);
 const releaseExtensions = new Set(['.css', '.html', '.js', '.json', '.svg']);
 const maxBytes = 8 * 1024 * 1024;
 
@@ -23,11 +23,12 @@ async function collectFiles(directory) {
   return files;
 }
 
-export async function auditBuild(projectRoot) {
+export async function auditBuild(projectRoot, { allowedExternalUrls = [] } = {}) {
   const root = resolve(projectRoot);
   const files = await collectFiles(root);
   let totalBytes = 0;
   const violations = [];
+  const allowedUrls = new Set(allowedExternalUrls);
 
   for (const file of files) {
     const metadata = await stat(file);
@@ -35,8 +36,10 @@ export async function auditBuild(projectRoot) {
     const content = await readFile(file, 'utf8');
     const displayPath = relative(root, file);
 
-    if (/https?:\/\//i.test(content)) {
-      violations.push(`${displayPath}: external URL reference`);
+    const externalUrls = content.match(/https?:\/\/[^\s"'<>]+/gi) ?? [];
+    const blockedUrls = externalUrls.filter((url) => !allowedUrls.has(url));
+    if (blockedUrls.length > 0) {
+      violations.push(`${displayPath}: external URL reference (${blockedUrls.join(', ')})`);
     }
     if (/\bconsole\.log\s*\(/.test(content)) {
       violations.push(`${displayPath}: console.log is not allowed in release files`);
