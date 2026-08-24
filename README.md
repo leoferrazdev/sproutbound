@@ -54,3 +54,7 @@ npm run build:gamedistribution
 ```
 
 This creates a separate `submission/sproutbound-gamedistribution.zip` package with the official GameDistribution SDK and the platform adapter. The default `index.html` and the offline base build remain unchanged and continue to pass the zero-request audit. The upload and portal checklist are documented in [`docs/gamedistribution-submission.md`](docs/gamedistribution-submission.md).
+
+## GamePix build
+
+GamePix uses the audited offline package `submission/sproutbound-basic-launch.zip`. No GamePix SDK or runtime request is added. The portal metadata and submission gate are documented in [`docs/gamepix-submission.md`](docs/gamepix-submission.md); the portal still requires an original human-authored description before the game record can be created.
