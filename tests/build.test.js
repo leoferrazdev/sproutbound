@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { auditBuild } from '../tools/check-build.mjs';
+import { buildGameDistribution } from '../tools/build-gamedistribution.mjs';
 
 async function withFixture(files, callback) {
   const root = await mkdtemp(join(tmpdir(), 'sproutbound-audit-'));
@@ -44,4 +45,31 @@ test('release audit ignores submission media sources', async () => {
   }, (root) => auditBuild(root));
 
   assert.equal(result.ok, true);
+});
+
+test('GameDistribution audit allows only the official SDK URL when configured', async () => {
+  const allowedUrl = 'https://html5.api.gamedistribution.com/main.min.js';
+  const result = await withFixture({
+    'index.html': `<script src="${allowedUrl}"></script>`,
+  }, (root) => auditBuild(root, { allowedExternalUrls: [allowedUrl] }));
+
+  assert.equal(result.ok, true);
+});
+
+test('GameDistribution builder creates a platform entrypoint and ZIP root', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'sproutbound-gd-build-'));
+  const outputRoot = join(root, 'build');
+  const zipPath = join(root, 'sproutbound-gamedistribution.zip');
+  try {
+    await buildGameDistribution({ outputRoot, zipPath });
+    const indexHtml = await readFile(join(outputRoot, 'index.html'), 'utf8');
+
+    assert.match(indexHtml, /gameId:\s*["']8ccb967dc0be492c9be5fc5a95f32fd5["']/);
+    assert.match(indexHtml, /html5\.api\.gamedistribution\.com\/main\.min\.js/);
+    assert.match(indexHtml, /src\/main-gamedistribution\.js/);
+    assert.equal(await stat(join(outputRoot, 'index.html')).then(() => true), true);
+    assert.equal(await stat(zipPath).then(() => true), true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
