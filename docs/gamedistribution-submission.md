@@ -14,10 +14,12 @@
 - [x] Build HTML5 inicial enviado.
 - [x] Thumbnails obrigatórios enviados.
 - [x] Variante GameDistribution gerada localmente.
-- [ ] Novo ZIP da variante enviado ao portal.
-- [ ] SDK detectado como Yes.
-- [ ] Anúncio de teste assistido até o fim no iframe.
+- [x] Novo ZIP da variante enviado ao portal em 24 Aug 2026.
+- [x] SDK detectado como Yes.
+- [x] Anúncio interstitial de teste assistido até o fim no iframe, sem skip.
 - [ ] Request Activation enviado.
+
+O primeiro upload da variante foi rejeitado pelo parser porque os itens tinham o prefixo `./`. O builder foi corrigido para escrever `index.html`, `styles.css` e `src/` diretamente na raiz; o segundo upload foi aceito e validado pelo portal.
 
 ## Gerar o pacote
 
