@@ -17,7 +17,14 @@
 - [x] Novo ZIP da variante enviado ao portal em 24 Aug 2026.
 - [x] SDK detectado como Yes.
 - [x] Anúncio interstitial de teste assistido até o fim no iframe, sem skip.
-- [ ] Request Activation enviado.
+- [x] Request Activation enviado em 24 Aug 2026.
+
+## Estado após o envio
+
+- Portal: `Request activation COMPLETE`
+- Status: `In Review`
+- Distribuição: `Not Active` enquanto a revisão manual não for concluída.
+- SDK: `Yes`
 
 O primeiro upload da variante foi rejeitado pelo parser porque os itens tinham o prefixo `./`. O builder foi corrigido para escrever `index.html`, `styles.css` e `src/` diretamente na raiz; o segundo upload foi aceito e validado pelo portal.
 
