@@ -10,6 +10,13 @@ test('offline shell exposes one local game canvas', async () => {
 
   assert.match(html, /id=["']game["']/);
   assert.match(html, /<canvas\b/i);
-  assert.match(html, /<script[^>]+type=["']module["']/i);
+  assert.match(html, /<script[^>]+type=["']module["'][^>]+src=["']\.\/src\/main\.js["']/i);
   assert.doesNotMatch(html, /https?:\/\//i);
+});
+
+test('GameDistribution bootstrap stays local until the platform build injects its SDK', async () => {
+  const entrypoint = await readFile(resolve(projectRoot, 'src/main-gamedistribution.js'), 'utf8');
+
+  assert.match(entrypoint, /\.\/platform-adapters\/gamedistribution\.js/);
+  assert.doesNotMatch(entrypoint, /https?:\/\//i);
 });
