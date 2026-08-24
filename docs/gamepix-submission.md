@@ -20,7 +20,7 @@ O pacote não deve incluir `submission/`, fontes do projeto, notas internas, cre
 
 O formulário GamePix exige uma descrição original entre 100 e 500 caracteres e informa expressamente que não aceita texto gerado por IA nem cópia de outros sites. A descrição foi reescrita pelo responsável pelo projeto e salva no portal; o agente não a apresenta como texto autoral próprio.
 
-O registro `my.gamepix.com/games/sproutbound` foi criado e o portal liberou a etapa `Submit for Review`.
+O registro `my.gamepix.com/games/sproutbound` foi criado, o portal liberou a etapa `Submit for Review` e o envio foi concluído. O cabeçalho passou para `New release REVIEW`; aprovação e publicação continuam pendentes da análise da GamePix.
 
 ## Checklist operacional
 
@@ -34,7 +34,13 @@ O registro `my.gamepix.com/games/sproutbound` foi criado e o portal liberou a et
 - [x] Upload do ZIP do build-base.
 - [x] Preencher capas, orientação, controles e demais metadados solicitados.
 - [ ] Executar o preview/QA disponível no portal.
-- [ ] Confirmar e submeter para revisão.
+- [x] Confirmar e submeter para revisão.
+
+## Resultado do envio
+
+- Estado observado no portal: `New release REVIEW`.
+- Data do envio: 2026-08-24.
+- Aprovação, publicação e métricas de jogadores reais: pendentes.
 
 ## Verificações antes do upload
 
