@@ -45,7 +45,17 @@ export async function buildGameDistribution({
   await cp(join(root, 'src'), join(output, 'src'), { recursive: true });
   await writeFile(join(output, 'index.html'), platformIndex(sourceIndex), 'utf8');
   await mkdir(dirname(archive), { recursive: true });
-  await execFile('tar', ['-a', '-c', '-f', archive, '-C', output, '.']);
+  await execFile('tar', [
+    '-a',
+    '-c',
+    '-f',
+    archive,
+    '-C',
+    output,
+    'index.html',
+    'styles.css',
+    'src',
+  ]);
 
   return { outputRoot: output, zipPath: archive, gameId, sdkUrl };
 }
