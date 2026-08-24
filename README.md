@@ -46,3 +46,11 @@ npm run check:build
 ```
 
 The build audit rejects external URLs, `console.log` in release files, and any total above 8 MB. Manual gameplay checks are documented in [`docs/qa.md`](docs/qa.md).
+
+## GameDistribution build
+
+```powershell
+npm run build:gamedistribution
+```
+
+This creates a separate `submission/sproutbound-gamedistribution.zip` package with the official GameDistribution SDK and the platform adapter. The default `index.html` and the offline base build remain unchanged and continue to pass the zero-request audit. The upload and portal checklist are documented in [`docs/gamedistribution-submission.md`](docs/gamedistribution-submission.md).
