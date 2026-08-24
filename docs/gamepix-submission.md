@@ -16,11 +16,11 @@ O pacote não deve incluir `submission/`, fontes do projeto, notas internas, cre
 - Main tag: `Arcade games`
 - Tags adicionais: `Jumping games`, `Platformer games`, `Skill games`, `Casual games`
 
-## Bloqueio de cadastro
+## Autoria e estado do cadastro
 
-O formulário GamePix exige uma descrição original entre 100 e 500 caracteres e informa expressamente que não aceita texto gerado por IA nem cópia de outros sites. O título e as tags podem ser preparados autonomamente, mas a descrição não pode ser inventada ou apresentada como autoral pelo agente.
+O formulário GamePix exige uma descrição original entre 100 e 500 caracteres e informa expressamente que não aceita texto gerado por IA nem cópia de outros sites. A descrição foi reescrita pelo responsável pelo projeto e salva no portal; o agente não a apresenta como texto autoral próprio.
 
-Enquanto esse campo não for preenchido com texto autoral, o botão `Create` permanece desabilitado e nenhum registro de jogo deve ser criado no portal.
+O registro `my.gamepix.com/games/sproutbound` foi criado e o portal liberou a etapa `Submit for Review`.
 
 ## Checklist operacional
 
@@ -29,12 +29,12 @@ Enquanto esse campo não for preenchido com texto autoral, o botão `Create` per
 - [x] Categoria principal definida.
 - [x] Quatro tags específicas definidas.
 - [x] Build-base offline existente e separado das variantes de plataforma.
-- [ ] Descrição autoral de 100–500 caracteres.
-- [ ] Criar o registro no portal.
-- [ ] Upload do ZIP do build-base.
-- [ ] Preencher capas, orientação, controles e demais metadados solicitados.
+- [x] Descrição autoral de 100–500 caracteres.
+- [x] Criar o registro no portal.
+- [x] Upload do ZIP do build-base.
+- [x] Preencher capas, orientação, controles e demais metadados solicitados.
 - [ ] Executar o preview/QA disponível no portal.
-- [ ] Submeter para revisão.
+- [ ] Confirmar e submeter para revisão.
 
 ## Verificações antes do upload
 
