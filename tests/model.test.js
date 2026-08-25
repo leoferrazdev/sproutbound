@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPlatform, createRun } from '../src/game/model.js';
+import { applyProgression, createDefaultProgress } from '../src/game/progression.js';
 
 test('new run starts ready with a player and safe starting platform', () => {
   const run = createRun();
@@ -18,7 +19,20 @@ test('new run starts ready with a player and safe starting platform', () => {
   const lastPlatform = run.platforms.at(-1);
   const expectedSummitHeight = Math.floor((run.startY - lastPlatform.y) / 12) + 1;
   assert.equal(run.summitHeight, expectedSummitHeight);
-  assert.ok(run.summitHeight > 200);
+  assert.equal(run.summitHeight, 249);
+});
+
+test('new run carries persistent visual progression and solar state', () => {
+  const reachedBloom = applyProgression(createDefaultProgress(), { type: 'height', height: 25 });
+  const run = createRun(1, reachedBloom.progress);
+
+  assert.equal(run.visualTier.id, 'bloom');
+  assert.deepEqual(run.solar, {
+    collected: 0,
+    charge: 0,
+    shieldAvailable: false,
+    shieldUsed: false,
+  });
 });
 
 test('platform constructor applies the stable leaf shape', () => {

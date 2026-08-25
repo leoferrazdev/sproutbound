@@ -22,6 +22,25 @@ test('keyboard input maps A and ArrowRight to the expected axis', () => {
   unbind();
 });
 
+test('keyboard input supports Q and Z layouts and focuses the game on touch', () => {
+  const target = new EventTarget();
+  let focusCount = 0;
+  target.focus = () => { focusCount += 1; };
+  const state = createInputState();
+  const unbind = bindInput(target, state);
+
+  dispatch(target, 'keydown', { code: 'KeyQ' });
+  assert.equal(readInput(state, 360).axis, -1);
+  dispatch(target, 'keyup', { code: 'KeyQ' });
+  dispatch(target, 'keydown', { code: 'KeyZ' });
+  assert.equal(readInput(state, 360).axis, -1);
+  focusCount = 0;
+  dispatch(target, 'pointerdown', { clientX: 280 });
+  assert.equal(focusCount, 1);
+
+  unbind();
+});
+
 test('pointer input maps to the logical stage halves', () => {
   const target = new EventTarget();
   const state = createInputState();

@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createWorld } from '../src/game/world.js';
+import { createWorld, getRouteSegment } from '../src/game/world.js';
 
 const viewport = { width: 360, height: 640 };
 
 test('same seed produces the same world', () => {
   assert.deepEqual(createWorld(7, viewport), createWorld(7, viewport));
+});
+
+test('route segments make the difficulty promise explicit', () => {
+  assert.equal(getRouteSegment(0).id, 'intro');
+  assert.equal(getRouteSegment(30).id, 'risk');
+  assert.equal(getRouteSegment(90).id, 'variation');
+  assert.equal(getRouteSegment(180).id, 'summit');
+  assert.ok(getRouteSegment(0).maxGap <= getRouteSegment(30).maxGap);
 });
 
 test('initial world keeps early platforms readable and hazard-free', () => {

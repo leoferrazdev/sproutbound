@@ -258,3 +258,76 @@ test('thorn leaf renders a dark canopy with integrated spikes', () => {
   assert.ok(context.fillStyles.includes('#536b57'));
   assert.ok(context.lines.length >= 6);
 });
+
+test('persistent visual tier changes Pip presentation on a new run', () => {
+  const context = {
+    fillStyles: [],
+    createLinearGradient: () => ({ addColorStop: () => {} }),
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    quadraticCurveTo: () => {},
+    closePath: () => {},
+    fill: () => {},
+    stroke: () => {},
+    fillRect: () => {},
+    clearRect: () => {},
+    setTransform: () => {},
+    arc: () => {},
+    ellipse: () => {},
+    save: () => {},
+    translate: () => {},
+    scale: () => {},
+    restore: () => {},
+    set fillStyle(value) {
+      this.fillStyles.push(value);
+    },
+  };
+  const canvas = { width: 360, height: 640, getContext: () => context };
+  const renderer = createCanvasRenderer(canvas);
+
+  renderer.render({
+    cameraY: 0,
+    platforms: [],
+    sunDrops: [],
+    visualTier: { id: 'sun-cape', accent: '#ffd166' },
+    player: { x: 127, y: 166, width: 26, height: 34, dead: false, grounded: false },
+  });
+
+  assert.ok(context.fillStyles.includes('#ffd166'));
+});
+
+test('solar feedback draws a protective pulse around Pip', () => {
+  const context = {
+    arcs: [],
+    createLinearGradient: () => ({ addColorStop: () => {} }),
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    quadraticCurveTo: () => {},
+    closePath: () => {},
+    fill: () => {},
+    stroke: () => {},
+    fillRect: () => {},
+    clearRect: () => {},
+    setTransform: () => {},
+    arc: (...args) => { context.arcs.push(args); },
+    ellipse: () => {},
+    save: () => {},
+    translate: () => {},
+    scale: () => {},
+    restore: () => {},
+  };
+  const canvas = { width: 360, height: 640, getContext: () => context };
+  const renderer = createCanvasRenderer(canvas);
+
+  renderer.render({
+    cameraY: 0,
+    platforms: [],
+    sunDrops: [],
+    feedback: { shield: 0.5 },
+    player: { x: 127, y: 166, width: 26, height: 34, dead: false, grounded: false },
+  });
+
+  assert.ok(context.arcs.some(([, , radius]) => radius >= 20 && radius <= 26));
+});

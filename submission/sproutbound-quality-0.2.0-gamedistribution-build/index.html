@@ -54,6 +54,17 @@
         </section>
       </div>
     </main>
-    <script type="module" src="./src/main.js"></script>
+
+    <script>
+      window.GD_OPTIONS = {
+        gameId: "8ccb967dc0be492c9be5fc5a95f32fd5",
+        advertisementSettings: { autoplay: false },
+        onEvent(event) {
+          window.__sproutboundGameDistributionEvent?.(event);
+        },
+      };
+    </script>
+    <script src="https://html5.api.gamedistribution.com/main.min.js"></script>
+    <script type="module" src="./src/main-gamedistribution.js"></script>
   </body>
 </html>

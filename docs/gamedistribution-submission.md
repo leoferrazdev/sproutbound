@@ -41,6 +41,8 @@ O comando cria:
 - `submission/sproutbound-gamedistribution-build/`
 - `submission/sproutbound-gamedistribution.zip`
 
+Para a release `0.2.0-quality`, o pacote separado gerado sem sobrescrever o upload anterior é `submission/sproutbound-quality-0.2.0-gamedistribution.zip`.
+
 O pacote contém o SDK remoto oficial da GameDistribution como a única exceção à política de rede do build-base. O jogo continua resiliente se o SDK estiver bloqueado ou indisponível: o anúncio falha aberto e o loop pode continuar.
 
 ## Validação no portal

@@ -179,6 +179,64 @@ test('sun drops are collected once when Pip overlaps them', () => {
   assert.equal(second.run.sunCount, 1);
 });
 
+test('five collected sun drops charge a one-use solar shield', () => {
+  const run = {
+    state: 'playing',
+    score: 0,
+    bestScore: 0,
+    cameraY: 0,
+    solar: { collected: 0, charge: 0, shieldAvailable: false, shieldUsed: false },
+    player: { ...createPlayer({ x: 90, y: 300 }), grounded: false, vy: 0 },
+    platforms: [],
+    thorns: [],
+    sunDrops: [
+      { type: 'sun', x: 100, y: 318, radius: 8, kind: 'sun' },
+      { type: 'sun', x: 106, y: 318, radius: 8, kind: 'sun' },
+      { type: 'sun', x: 112, y: 318, radius: 8, kind: 'sun' },
+      { type: 'sun', x: 118, y: 318, radius: 8, kind: 'sun' },
+      { type: 'sun', x: 124, y: 318, radius: 8, kind: 'sun' },
+    ],
+  };
+
+  const result = stepRun(run, {}, 0.01);
+
+  assert.ok(result.events.includes('collectedSun'));
+  assert.ok(result.events.includes('solarShieldReady'));
+  assert.deepEqual(result.run.solar, {
+    collected: 5,
+    charge: 0,
+    shieldAvailable: true,
+    shieldUsed: false,
+  });
+});
+
+test('solar shield absorbs one thorn canopy collision and is then consumed', () => {
+  const run = {
+    state: 'playing',
+    score: 20,
+    bestScore: 20,
+    cameraY: 0,
+    solar: { collected: 5, charge: 0, shieldAvailable: true, shieldUsed: false },
+    player: { ...createPlayer({ x: 80, y: 90 }), grounded: false, vy: 0 },
+    platforms: [{ x: 60, y: 90, width: 100, height: 18, kind: 'thorn-leaf' }],
+    thorns: [],
+    sunDrops: [],
+  };
+
+  const result = stepRun(run, {}, 0.01);
+
+  assert.ok(result.events.includes('hazardHit'));
+  assert.ok(result.events.includes('solarShieldUsed'));
+  assert.equal(result.events.includes('playerDied'), false);
+  assert.equal(result.run.state, 'playing');
+  assert.deepEqual(result.run.solar, {
+    collected: 5,
+    charge: 0,
+    shieldAvailable: false,
+    shieldUsed: true,
+  });
+});
+
 test('height is measured from the highest world position instead of landings', () => {
   const run = {
     state: 'playing',

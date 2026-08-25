@@ -7,6 +7,7 @@ O GamePix recebe o build-base offline do Sproutbound. Não será criada uma vari
 Artefato definido:
 
 - `submission/sproutbound-basic-launch.zip`
+- Próxima release de qualidade: `submission/sproutbound-quality-0.2.0.zip`
 
 O pacote não deve incluir `submission/`, fontes do projeto, notas internas, credenciais ou ferramentas de desenvolvimento. O mesmo build jogável pode ser distribuído em diferentes portais; apenas metadados, capas, checklist e integrações autorizadas permanecem específicos de cada plataforma.
 

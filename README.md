@@ -1,6 +1,6 @@
 # Sproutbound — Sunbound climb
 
-An English-first vertical arcade MVP for web browsers. Pip is a small sprout that automatically bounces between leaves, collects solar drops, and climbs toward the summit. Portuguese remains available automatically when the browser locale starts with `pt-`; unsupported locales fall back to English.
+An English-first vertical arcade game for web browsers. Pip is a small sprout that automatically bounces between leaves, collects solar drops, charges a one-use solar shield, and climbs toward the summit. Portuguese remains available automatically when the browser locale starts with `pt-`; unsupported locales fall back to English.
 
 ## Run locally
 
@@ -17,6 +17,7 @@ Open `http://localhost:8080` in a browser. A local server is required because th
 
 - Tap/click the left or right half of the stage to guide Pip.
 - `A` / `←`: move left.
+- `Q` / `Z` / `A` / `←`: move left.
 - `D` / `→`: move right.
 - The first physical input starts the run.
 - After Game Over, only `Play again` starts a new run.
@@ -26,9 +27,13 @@ Open `http://localhost:8080` in a browser. A local server is required because th
 - Fixed logical stage of 360×640, 9:16 portrait ratio, centered inside landscape viewports.
 - Early leaves are safe and thorn-free so the first interaction is readable.
 - Height is measured from the highest world position reached in metres; landings are not counted as points.
-- Collected solar drops update the solar counter and disappear once per run.
-- The route ends at an explicit summit near 249 m; reaching it freezes the run and unlocks Summit Crown.
+- Collected solar drops update the solar counter, charge a shield every five drops, and disappear once per run.
+- The solar shield absorbs one thorn-canopy collision and relaunches Pip; falling out of the route remains a defeat.
+- The route is divided into an intro (0–30 m), first hazards (30–90 m), moving canopy (90–180 m), and summit push (180–249 m).
+- The route ends at an explicit summit at 249 m; reaching it freezes the run and unlocks Summit Crown.
 - Later leaves may crack, move, dip on impact, or carry integrated thorns.
+- Persistent visual milestones change Pip at 10 m, 25 m, 60 m, and 240 m; the current tier is loaded before each new run.
+- Short local feedback pulses and synthesized cues communicate landings, solar collection, shield state, milestones, and defeat. Audio starts only after interaction and can be muted by platform pauses.
 - Progress is persisted through a `try/catch` storage adapter; blocked storage never freezes the game.
 - The platform adapter is neutral and idempotent. It contains no external SDK, `fetch`, or platform request in the base build.
 
@@ -46,6 +51,10 @@ npm run check:build
 ```
 
 The build audit rejects external URLs, `console.log` in release files, and any total above 8 MB. Manual gameplay checks are documented in [`docs/qa.md`](docs/qa.md).
+
+## Quality release
+
+Release `0.2.0-quality` is the first candidate intended for a new platform review. It is a gameplay release, not a cosmetic patch: the solar resource now has a defensive purpose, the summit is explicit, the difficulty is segmented, onboarding names every supported control layout, and persistent rewards are visible during the run. The release gate is documented in [`docs/quality-release-0.2.0.md`](docs/quality-release-0.2.0.md).
 
 ## GameDistribution build
 

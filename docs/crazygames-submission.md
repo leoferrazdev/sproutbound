@@ -8,8 +8,8 @@
 - [x] Portrait-first layout that remains playable inside desktop landscape viewports.
 - [x] No runtime CDN, analytics, external font, or network request.
 - [x] Build below the local 8 MB ceiling and below CrazyGames Basic Launch limits.
-- [x] 49 automated tests passing.
-- [x] Upload package prepared at `submission/sproutbound-basic-launch.zip`.
+- [x] 69 automated tests passing for release `0.2.0-quality`.
+- [x] Quality upload package prepared at `submission/sproutbound-quality-0.2.0.zip`.
 
 ## Basic Launch
 

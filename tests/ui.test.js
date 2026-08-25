@@ -26,6 +26,9 @@ test('shell exposes accessible HUD, objective, pause state and explicit restart'
   assert.match(html, /Play again/);
   assert.match(html, /RUN OVER/);
   assert.match(html, /Next: Two-leaf sprout/);
+  assert.match(html, /id=["']desktop-guide["']/);
+  assert.match(html, /tabindex=["']0["']/);
+  assert.match(html, /id=["']solar-counter["']/);
 });
 
 test('responsive shell keeps portrait aspect ratio and safe-area behavior', async () => {

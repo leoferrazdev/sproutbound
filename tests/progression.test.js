@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyProgression, createDefaultProgress, getMilestone } from '../src/game/progression.js';
+import {
+  applyProgression,
+  createDefaultProgress,
+  getMilestone,
+  getVisualTier,
+} from '../src/game/progression.js';
 import { createSafeStorage } from '../src/storage.js';
 
 test('first visual milestone is reachable and exposes the next objective', () => {
@@ -34,6 +39,16 @@ test('progression unlocks a milestone once and ignores duplicates', () => {
   assert.deepEqual(first.unlocked, ['bud']);
   assert.deepEqual(repeated.unlocked, []);
   assert.deepEqual(repeated.progress.unlocked, ['bud']);
+});
+
+test('visual tier is deterministic and follows the highest unlocked milestone', () => {
+  const initial = getVisualTier(createDefaultProgress());
+  const reachedBloom = applyProgression(createDefaultProgress(), { type: 'height', height: 25 });
+  const bloom = getVisualTier(reachedBloom.progress);
+
+  assert.equal(initial.id, 'seed');
+  assert.equal(bloom.id, 'bloom');
+  assert.equal(bloom.accent, '#ff9ac2');
 });
 
 test('malformed persisted data falls back to a valid default', () => {
