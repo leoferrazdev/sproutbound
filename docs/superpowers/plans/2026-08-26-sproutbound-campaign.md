@@ -14,19 +14,20 @@ Especificação: `docs/superpowers/specs/2026-08-26-sproutbound-campaign-design.
 6. Objetivos de rota avaliados a partir dos eventos existentes.
 7. Gate mede a campanha inteira e o catálogo, em vez de uma partida.
 
-## Fase 2 — Biomas em tela
+## Fase 2 — Biomas em tela (concluída)
 
 1. Paleta por bioma aplicada a fundo, folhas, espinho e gota.
 2. Silhuetas de fundo com densidade por bioma.
-3. Transição de bioma ao trocar de rota.
+3. Transição de bioma ao trocar de rota, por interpolação de paleta em 0,85 s,
+   com troca instantânea sob `prefers-reduced-motion`.
 
-## Fase 3 — Interface da campanha
+## Fase 3 — Interface da campanha (concluída)
 
 1. Tela de seleção de rota com estado por fase: bloqueada, concluída, estrela.
 2. Objetivo visível durante a partida.
 3. Tela de conclusão com tempo, gotas e objetivo.
 
-## Fase 4 — Itens P1 independentes
+## Fase 4 — Itens P1 independentes (concluída)
 
 1. Menu, pausa e retomada por perda de foco.
 2. Áudio com leito musical e mute exposto.

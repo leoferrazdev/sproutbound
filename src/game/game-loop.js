@@ -1,5 +1,6 @@
 import { readInput } from '../input.js';
 import { createFeedbackState, stepFeedback } from './feedback.js';
+import { stepBiomeTransition } from './biome-transition.js';
 
 import { STAGE_WIDTH as LOGICAL_WIDTH, STAGE_HEIGHT as LOGICAL_HEIGHT } from './stage.js';
 
@@ -9,7 +10,7 @@ export function advanceCamera(run, viewportHeight) {
   return Math.min(current, target);
 }
 
-export function createGameLoop({ canvas, simulation, renderer, backdrop = null, ui, input }) {
+export function createGameLoop({ canvas, simulation, renderer, backdrop = null, ui, input, getBiomeTransition = () => null, setBiomeTransition = () => {} }) {
   const view = canvas.ownerDocument?.defaultView ?? globalThis;
   const request = view.requestAnimationFrame?.bind(view);
   const cancel = view.cancelAnimationFrame?.bind(view);
@@ -30,9 +31,12 @@ export function createGameLoop({ canvas, simulation, renderer, backdrop = null, 
       primary: normalizedInput.primary,
     }, elapsed);
     feedback = stepFeedback(feedback, result.events, elapsed, { player: result.run.player });
+    const biomeTransition = stepBiomeTransition(getBiomeTransition(), elapsed);
+    setBiomeTransition(biomeTransition);
     simulation.run = {
       ...result.run,
       feedback,
+      biomeTransition,
       cameraY: advanceCamera(result.run, LOGICAL_HEIGHT),
     };
     backdrop?.render(simulation.run);

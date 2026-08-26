@@ -6,6 +6,7 @@ import { createCanvasRenderer, createBackdropRenderer } from './render/canvas-re
 import { getVisualTier, getCurrentRoute, applyRouteResult, migrateProgress, selectRoute } from './game/progression.js';
 import { createObjectiveTracker, trackObjective, evaluateObjective, getRoute, getNextRoute } from './game/campaign.js';
 import { shouldPause, shouldResume } from './game/pause.js';
+import { createBiomeTransition, startBiomeTransition, stepBiomeTransition } from './game/biome-transition.js';
 import { createSafeStorage } from './storage.js';
 import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
@@ -58,7 +59,10 @@ export function createApp(
   let progress = migrateProgress(safeStorage.load());
   let route = getCurrentRoute(progress);
   let objective = createObjectiveTracker(route);
-  const simulation = { run: createRun(route, progress), stepRun };
+  let biomeTransition = createBiomeTransition(route.biome);
+  // Movimento é opcional: quem pede menos animação recebe a troca instantânea.
+  const semAnimacao = () => Boolean(documentRef.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+  const simulation = { run: { ...createRun(route, progress), biomeTransition: createBiomeTransition(route.biome) }, stepRun };
   const audio = createAudio({ windowRef: documentRef.defaultView });
   let paused = false;
   let loop;
@@ -73,6 +77,7 @@ export function createApp(
   const startRoute = (nextRoute) => {
     paused = false;
     audio.stopMusic();
+    biomeTransition = startBiomeTransition(biomeTransition, nextRoute.biome, { instant: semAnimacao() });
     route = nextRoute;
     objective = createObjectiveTracker(route);
     input.left = false;
@@ -80,7 +85,7 @@ export function createApp(
     input.pointerX = null;
     input.active = false;
     input.pressed = false;
-    simulation.run = createRun(route, progress);
+    simulation.run = { ...createRun(route, progress), biomeTransition };
     hud.update(simulation.run);
     screens.showReady();
     campaign?.hide();
@@ -236,7 +241,16 @@ export function createApp(
   hud.update(simulation.run);
   hud.showNextObjective(simulation.run.nextUnlock);
   screens.showReady();
-  loop = createGameLoop({ canvas, simulation, renderer, backdrop, ui, input });
+  loop = createGameLoop({
+    canvas,
+    simulation,
+    renderer,
+    backdrop,
+    ui,
+    input,
+    getBiomeTransition: () => biomeTransition,
+    setBiomeTransition: (valor) => { biomeTransition = valor; },
+  });
   documentRef.defaultView?.addEventListener('resize', resize);
   // O primeiro resize pode acontecer antes de o layout assentar; repetir no load
   // garante que o fundo cubra a janela inteira desde o começo.

@@ -1,5 +1,6 @@
 import { PULSE_SECONDS, pulseProgress } from '../game/feedback.js';
 import { getBiome } from '../game/campaign.js';
+import { resolveBiomePalette } from '../game/biome-transition.js';
 import { playerGhosts } from '../game/player.js';
 
 import { STAGE_WIDTH as LOGICAL_WIDTH, STAGE_HEIGHT as LOGICAL_HEIGHT } from '../game/stage.js';
@@ -360,7 +361,9 @@ export function createBackdropRenderer(canvas) {
     },
     render(snapshot = {}) {
       if (!context) return;
-      const palette = getBiome(snapshot.route?.biome);
+      const palette = snapshot.biomeTransition
+        ? resolveBiomePalette(snapshot.biomeTransition, snapshot.route?.biome)
+        : getBiome(snapshot.route?.biome);
       context.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
       // paralaxe mais lenta que a do palco: o fundo distante fica atrás de tudo
       drawBackground(context, (snapshot.cameraY ?? 0) * 0.55, palette, size.width, size.height);
@@ -397,7 +400,9 @@ export function createCanvasRenderer(canvas) {
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.setTransform(scale * dpr, 0, 0, scale * dpr, offsetX * dpr, offsetY * dpr);
     const feedback = snapshot.feedback ?? {};
-    const palette = getBiome(snapshot.route?.biome);
+    const palette = snapshot.biomeTransition
+      ? resolveBiomePalette(snapshot.biomeTransition, snapshot.route?.biome)
+      : getBiome(snapshot.route?.biome);
     const shake = impactShake(feedback);
     const cameraY = (snapshot.cameraY ?? 0) - shake.y;
 
