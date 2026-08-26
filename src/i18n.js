@@ -53,6 +53,19 @@ const MESSAGES = {
       message: 'Summit Crown unlocked.',
       reward: 'Reward: Summit Crown',
     },
+    pause: {
+      label: 'Paused',
+      eyebrow: 'PAUSED',
+      title: 'Take a breath.',
+      resume: 'Resume',
+      routes: 'Routes',
+      open: 'Pause',
+    },
+    sound: {
+      on: 'Sound on',
+      off: 'Sound off',
+      label: 'Toggle sound',
+    },
     campaign: {
       label: 'Route select',
       eyebrow: 'CAMPAIGN',
@@ -154,6 +167,19 @@ const MESSAGES = {
       title: 'Cume alcançado!',
       message: 'Coroa do cume desbloqueada.',
       reward: 'Recompensa: Coroa do cume',
+    },
+    pause: {
+      label: 'Pausado',
+      eyebrow: 'PAUSADO',
+      title: 'Respire um pouco.',
+      resume: 'Continuar',
+      routes: 'Rotas',
+      open: 'Pausar',
+    },
+    sound: {
+      on: 'Som ligado',
+      off: 'Som desligado',
+      label: 'Alternar som',
     },
     campaign: {
       label: 'Seleção de rota',

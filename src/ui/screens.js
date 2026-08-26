@@ -11,6 +11,8 @@ export function createScreens(root, actions = {}) {
   const nextUnlock = root.querySelector('#next-unlock');
   const restart = root.querySelector('#restart-button');
   const complete = root.querySelector('#complete-screen');
+  const pausePanel = root.querySelector('#pause-screen');
+  const pauseRoute = root.querySelector('#pause-route');
   const completeRoute = root.querySelector('#complete-route');
   const completeGoal = root.querySelector('#complete-goal');
   const completeStats = root.querySelector('#complete-stats');
@@ -26,6 +28,18 @@ export function createScreens(root, actions = {}) {
   if (completeAdvance) completeAdvance.textContent = translator.t('complete.advance');
   if (completeRetry) completeRetry.textContent = translator.t('complete.retry');
   completeAdvance?.addEventListener('click', () => actions.onAdvance?.());
+
+  if (pausePanel) pausePanel.setAttribute('aria-label', translator.t('pause.label'));
+  const pauseEyebrow = root.querySelector('#pause-eyebrow');
+  if (pauseEyebrow) pauseEyebrow.textContent = translator.t('pause.eyebrow');
+  const pauseTitle = root.querySelector('#pause-title');
+  if (pauseTitle) pauseTitle.textContent = translator.t('pause.title');
+  const pauseResume = root.querySelector('#pause-resume');
+  if (pauseResume) pauseResume.textContent = translator.t('pause.resume');
+  const pauseRoutes = root.querySelector('#pause-routes');
+  if (pauseRoutes) pauseRoutes.textContent = translator.t('pause.routes');
+  pauseResume?.addEventListener('click', () => actions.onResume?.());
+  pauseRoutes?.addEventListener('click', () => actions.onRoutes?.());
   completeRetry?.addEventListener('click', () => actions.onRestart?.());
 
   const readyEyebrow = ready?.querySelector('.eyebrow');
@@ -44,6 +58,7 @@ export function createScreens(root, actions = {}) {
     ready.hidden = true;
     gameOver.hidden = true;
     if (complete) complete.hidden = true;
+    if (pausePanel) pausePanel.hidden = true;
   };
   const showReady = () => {
     hideAll();
@@ -91,5 +106,12 @@ export function createScreens(root, actions = {}) {
     if (completeRetry) completeRetry.hidden = Boolean(run.objectiveMet);
   };
 
-  return { showReady, showPlaying, showGameOver, showSummit, hideAll };
+  const showPause = (run) => {
+    hideAll();
+    if (!pausePanel) return;
+    pausePanel.hidden = false;
+    if (pauseRoute) pauseRoute.textContent = run?.route ? routeLabel(translator, run.route) : '';
+  };
+
+  return { showReady, showPlaying, showGameOver, showSummit, showPause, hideAll, isPaused: () => Boolean(pausePanel && !pausePanel.hidden) };
 }

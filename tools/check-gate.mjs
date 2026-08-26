@@ -21,6 +21,7 @@ import { getMilestones } from '../src/game/progression.js';
 import { getRoutes, getRoute, BIOMES } from '../src/game/campaign.js';
 import { createFeedbackState, stepFeedback, PULSE_SECONDS } from '../src/game/feedback.js';
 import { createCanvasRenderer } from '../src/render/canvas-renderer.js';
+import { createAudio, getBiomeScale } from '../src/audio.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MANUAL_LOG = path.join(ROOT, 'docs', 'gate-manual-evidence.json');
@@ -306,13 +307,68 @@ check('P0-3', 'Todo evento de gameplay chega ao renderer', () => {
 });
 
 check('P1-1', 'Trilha musical presente e mute exposto', () => {
-  const audio = readFileSafe('src/audio.js') ?? '';
+  // Sonda de Web Audio: conta osciladores agendados. Provar que o módulo declara
+  // uma função de música não basta — o defeito recorrente deste projeto é
+  // exatamente declarar e não emitir.
+  const probe = () => {
+    const started = [];
+    class FakeContext {
+      constructor() { this.currentTime = 0; this.state = 'running'; this.destination = {}; }
+      createOscillator() {
+        const node = { type: 'sine', frequency: { setValueAtTime: (value) => { node.hz = value; } }, connect: () => {}, start: () => started.push(node.hz ?? 0), stop: () => {} };
+        return node;
+      }
+      createGain() { return { gain: { setValueAtTime: () => {} }, connect: () => {} }; }
+    }
+    const store = new Map();
+    const windowRef = {
+      AudioContext: FakeContext,
+      setInterval: () => 1,
+      clearInterval: () => {},
+      localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, v) },
+    };
+    return { audio: createAudio({ windowRef }), started, store };
+  };
+
+  const problems = [];
+
+  // 1. efeitos com camadas, não um bipe
+  const layered = probe();
+  layered.audio.playEvents(['collectedSun']);
+  if (layered.started.length < 2) problems.push(`coleta emite ${layered.started.length} voz, esperado ao menos 2`);
+
+  // 2. música toca e continua tocando
+  const music = probe();
+  music.audio.startMusic('canopy');
+  const afterStart = music.started.length;
+  for (let step = 0; step < 6; step += 1) music.audio.stepMusic();
+  if (afterStart === 0) problems.push('startMusic não emite som');
+  if (music.started.length <= afterStart) problems.push('a música não continua após o primeiro passo');
+  if (!music.audio.isMusicRunning()) problems.push('a música não permanece em execução');
+
+  // 3. cada bioma tem escala própria
+  const scales = new Set(['canopy', 'dusk', 'crystal', 'storm', 'summit'].map((b) => getBiomeScale(b).join(',')));
+  if (scales.size < 5) problems.push(`apenas ${scales.size} escalas distintas para 5 biomas`);
+
+  // 4. mute silencia de fato e é lembrado
+  const silence = probe();
+  silence.audio.setMuted(true);
+  silence.audio.playEvents(['collectedSun', 'summitReached']);
+  silence.audio.startMusic('dusk');
+  silence.audio.stepMusic();
+  if (silence.started.length !== 0) problems.push(`mute não silencia: ${silence.started.length} vozes emitidas`);
+  if (!silence.audio.isMuted()) problems.push('mute não fica ativo');
+  if (![...silence.store.values()].includes('true')) problems.push('a preferência de som não é persistida');
+
+  // 5. o controle existe na interface
   const html = readFileSafe('index.html') ?? '';
-  const hasMusic = /music|bed|loop|ambience/i.test(audio);
-  const hasMuteControl = /id="mute|data-action="mute|aria-label="[^"]*(?:mute|sound|audio)/i.test(html);
+  if (!/data-action="sound"/.test(html)) problems.push('sem controle de som na interface');
+
   return {
-    ok: hasMusic && hasMuteControl,
-    detail: `${hasMusic ? 'leito musical presente' : 'sem leito musical'}; ${hasMuteControl ? 'controle de mute na interface' : 'sem controle de mute na interface'}`,
+    ok: problems.length === 0,
+    detail: problems.length
+      ? problems.join('; ')
+      : `música em loop por bioma, efeitos com camadas e mute persistido`,
   };
 });
 

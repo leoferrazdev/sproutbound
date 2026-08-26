@@ -5,6 +5,7 @@ import { stepRun } from './game/simulation.js';
 import { createCanvasRenderer } from './render/canvas-renderer.js';
 import { getVisualTier, getCurrentRoute, applyRouteResult, migrateProgress, selectRoute } from './game/progression.js';
 import { createObjectiveTracker, trackObjective, evaluateObjective, getRoute, getNextRoute } from './game/campaign.js';
+import { shouldPause, shouldResume } from './game/pause.js';
 import { createSafeStorage } from './storage.js';
 import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
@@ -64,6 +65,7 @@ export function createApp(
   let objective = createObjectiveTracker(route);
   const simulation = { run: createRun(route, progress), stepRun };
   const audio = createAudio({ windowRef: documentRef.defaultView });
+  let paused = false;
   let loop;
   const platformAdapter = platformAdapterFactory({
     onPause: () => loop?.pause(),
@@ -74,6 +76,8 @@ export function createApp(
   const hud = createHud(gameRoot, translator);
   let campaign;
   const startRoute = (nextRoute) => {
+    paused = false;
+    audio.stopMusic();
     route = nextRoute;
     objective = createObjectiveTracker(route);
     input.left = false;
@@ -91,6 +95,8 @@ export function createApp(
 
   const screens = createScreens(gameRoot, {
     translator,
+    onResume: () => resumeGame(),
+    onRoutes: () => openCampaign(),
     onAdvance: async () => {
       await platformAdapter.requestCommercialBreak();
       startRoute(getNextRoute(route) ?? route);
@@ -115,12 +121,66 @@ export function createApp(
     },
   });
 
-  const openCampaign = () => {
+  const soundButtons = [gameRoot.querySelector('#sound-button'), gameRoot.querySelector('#pause-sound')].filter(Boolean);
+  const syncSoundButtons = () => {
+    const label = translator.t(audio.isMuted() ? 'sound.off' : 'sound.on');
+    for (const button of soundButtons) {
+      button.textContent = label;
+      button.setAttribute('aria-pressed', String(audio.isMuted()));
+      button.setAttribute('aria-label', translator.t('sound.label'));
+    }
+  };
+  const toggleSound = () => {
+    const nowMuted = audio.toggleMuted();
+    if (!nowMuted && simulation.run.state === 'playing' && !paused) audio.startMusic(route.biome);
+    syncSoundButtons();
+  };
+  for (const button of soundButtons) button.addEventListener('click', toggleSound);
+  syncSoundButtons();
+
+  function openCampaign() {
+    paused = true;
     loop.pause();
+    audio.stopMusic();
     screens.hideAll();
     campaign.show(progress, route.id);
-  };
+  }
+
+  // Pausa de verdade: antes o evento de visibilidade só limpava o input e a
+  // partida seguia rodando, então trocar de aba custava a rodada.
+  function pauseGame(trigger = 'button') {
+    if (!shouldPause({ runState: simulation.run.state, paused, campaignOpen: campaign.isOpen(), trigger })) return;
+    paused = true;
+    loop.pause();
+    audio.stopMusic();
+    input.left = false;
+    input.right = false;
+    input.pressed = false;
+    input.active = false;
+    platformAdapter.pauseInput();
+    screens.showPause(simulation.run);
+  }
+
+  function resumeGame() {
+    if (!shouldResume({ paused, campaignOpen: campaign.isOpen() })) return;
+    paused = false;
+    campaign.hide();
+    screens.showPlaying();
+    platformAdapter.resumeInput();
+    if (!audio.isMuted()) audio.startMusic(route.biome);
+    loop.resume();
+  }
+
   gameRoot.querySelector('#routes-button')?.addEventListener('click', openCampaign);
+  gameRoot.querySelector('#pause-button')?.addEventListener('click', () => (paused ? resumeGame() : pauseGame()));
+  documentRef.addEventListener('visibilitychange', () => { if (documentRef.hidden) pauseGame('hidden'); });
+  documentRef.defaultView?.addEventListener('blur', () => pauseGame('blur'));
+  documentRef.defaultView?.addEventListener('keydown', (event) => {
+    // Escape não é usado: a plataforma reserva a tecla para sair do fullscreen.
+    if (event.code !== 'KeyP') return;
+    event.preventDefault();
+    if (paused) resumeGame(); else pauseGame('key');
+  });
   const ui = {
     update(run, events, dt = 0) {
       audio.playEvents(events);
@@ -129,9 +189,12 @@ export function createApp(
       if (run.nextUnlock) hud.showNextObjective(run.nextUnlock);
       if (events.includes('gameplayStarted')) {
         void platformAdapter.startGameplay();
+        audio.setBiome(route.biome);
+        if (!audio.isMuted()) audio.startMusic(route.biome);
       }
       if (events.includes('summitReached')) {
         void platformAdapter.stopGameplay();
+        audio.stopMusic();
         const verdict = evaluateObjective(objective);
         const result = applyRouteResult(progress, {
           routeId: route.id,
@@ -156,6 +219,7 @@ export function createApp(
         hud.showObjective(translator.t('objective.summit'));
       } else if (events.includes('playerDied')) {
         void platformAdapter.stopGameplay();
+        audio.stopMusic();
         screens.showGameOver(run);
       } else if (run.state === 'playing') {
         screens.showPlaying();

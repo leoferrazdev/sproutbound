@@ -288,16 +288,6 @@ button:focus-visible {
   color: #ffb3ab;
 }
 
-#routes-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  min-width: 76px;
-  min-height: 44px;
-  padding: 0 14px;
-  font-size: 12px;
-}
-
 .campaign-card {
   /* O painel precisa caber no palco e ceder a altura restante à lista; sem isto
      ele cresce para conter as 25 rotas e a rolagem interna nunca acontece. */
@@ -433,3 +423,29 @@ button:focus-visible {
   .route-card { transition: none; }
   .route-card:not(:disabled):active { transform: none; }
 }
+
+/* Ações do HUD: som, rotas e pausa. */
+.hud-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.hud-actions .hud-button {
+  min-width: 68px;
+  min-height: 44px;
+  padding: 0 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+#sound-button[aria-pressed="true"] {
+  border-color: rgb(255 138 128 / 45%);
+  color: rgba(255, 179, 171, 0.92);
+}
+
+#pause-screen { gap: 8px; }
+#pause-screen .secondary-button { margin-top: 6px; }

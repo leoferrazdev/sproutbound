@@ -37,7 +37,11 @@
             <p id="objective" class="objective">Tap left or right to guide Pip.</p>
             <p id="solar-counter" class="sun-counter" aria-label="Collected solar drops">Solar light: 0 · Solar charge: 0/5</p>
             <p id="pause-state" class="sr-only" aria-live="assertive">Game ready</p>
-            <button id="routes-button" class="hud-button" type="button" data-action="routes">Routes</button>
+            <div class="hud-actions">
+              <button id="sound-button" class="hud-button" type="button" data-action="sound" aria-pressed="false">Sound on</button>
+              <button id="routes-button" class="hud-button" type="button" data-action="routes">Routes</button>
+              <button id="pause-button" class="hud-button" type="button" data-action="pause">Pause</button>
+            </div>
           </div>
           <div id="screens" class="screens">
             <section id="ready-screen" class="screen-card" aria-label="Start of the run">
@@ -45,6 +49,15 @@
               <h1>Help Pip climb.</h1>
               <p>Tap left or right, or use ← → / A D / Q Z to guide Pip.</p>
             </section>
+            <section id="pause-screen" class="screen-card" aria-label="Paused" hidden>
+              <p class="eyebrow" id="pause-eyebrow">PAUSED</p>
+              <h1 id="pause-title">Take a breath.</h1>
+              <p id="pause-route" class="complete-route"></p>
+              <button id="pause-resume" class="primary-button" type="button" data-action="resume">Resume</button>
+              <button id="pause-routes" class="secondary-button" type="button" data-action="routes">Routes</button>
+              <button id="pause-sound" class="secondary-button" type="button" data-action="sound">Sound on</button>
+            </section>
+
             <section id="campaign-screen" class="screen-card campaign-card" aria-label="Route select" hidden>
               <p class="eyebrow" id="campaign-eyebrow">CAMPAIGN</p>
               <h1 id="campaign-title">Choose a route.</h1>
