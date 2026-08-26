@@ -76,3 +76,27 @@ test('o seletor de rota cobre a campanha inteira', async () => {
   assert.ok(padrao, 'sem rota padrão selecionada');
   assert.ok(Number(padrao) >= 1 && Number(padrao) <= getRoutes().length, 'rota padrão fora do catálogo');
 });
+
+test('o gravador recusa gravar em aba que o navegador estrangula', async () => {
+  const fonte = await readFile(recorderPath, 'utf8');
+  // Medido: em aba oculta o rAF fica em 0 quadro e o setInterval vai a 1006 ms.
+  // MediaRecorder grava em tempo real, então a tomada sairia com um punhado de
+  // quadros e um arquivo de tamanho aparentemente normal.
+  assert.match(fonte, /medirAptidao/);
+  assert.match(fonte, /document\.visibilityState !== 'visible'/);
+  assert.match(fonte, /if \(!aptidao\.apta\)/, 'a gravação precisa parar antes de começar');
+});
+
+test('a tomada é descartada se a aba perder o foco no meio', async () => {
+  const fonte = await readFile(recorderPath, 'utf8');
+  assert.match(fonte, /perdeuFoco/);
+  assert.match(fonte, /addEventListener\('visibilitychange', aoEsconder\)/);
+  assert.match(fonte, /removeEventListener\('visibilitychange', aoEsconder\)/, 'o ouvinte precisa ser removido');
+  assert.match(fonte, /descartado: true/);
+});
+
+test('a conferência reprova tomada abaixo de 30 quadros por segundo', async () => {
+  const fonte = await readFile(recorderPath, 'utf8');
+  assert.match(fonte, /fpsReal < 30/);
+  assert.match(fonte, /\['Quadros por segundo', `\$\{fpsReal\}`, fpsReal >= 30\]/);
+});

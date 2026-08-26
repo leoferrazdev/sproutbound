@@ -18,6 +18,12 @@ tab: `requestAnimationFrame` is suspended in a hidden one.
 
 ## Recording
 
+> The tab must stay in the foreground for the whole take. A hidden tab suspends
+> `requestAnimationFrame` entirely and throttles `setInterval` to one second, while
+> MediaRecorder keeps recording in real time — the file would come out the right size with
+> a handful of frames in it. The tool now measures this and refuses to start, and discards
+> a take if focus is lost partway, so a broken video cannot reach the portal unnoticed.
+
 1. Start a local server and keep the tab **visible** the whole time.
 
 ```bash
@@ -70,7 +76,8 @@ npm run gate
 ffmpeg -i input.webm -c:v libx264 -crf 20 -pix_fmt yuv420p -an output.mp4
 ```
 
-- Checks the result against the specification and shows a pass/fail table.
+- Checks the result against the specification and shows a pass/fail table, including the
+  frame rate actually achieved. Anything under 30 fps is discarded.
 
 ## If a take looks wrong
 

@@ -62,6 +62,11 @@
     </select></label>
   </fieldset>
 
+  <fieldset id="aviso-aba" hidden>
+    <legend>Atenção</legend>
+    <p id="aviso-texto" style="margin:0;color:#ff9b91;font-weight:700"></p>
+  </fieldset>
+
   <fieldset>
     <legend>Gravar</legend>
     <button id="btn-gravar" class="primario">Gravar</button>
@@ -267,6 +272,40 @@ function desenharHud(ctx, run, objetivo, caixa, escala) {
   ctx.restore();
 }
 
+// A aba precisa estar visível: em aba oculta o navegador suspende
+// requestAnimationFrame e estrangula setInterval para 1 s. MediaRecorder grava em
+// tempo real, então a tomada sairia com um punhado de quadros em vez de mil — e
+// o arquivo pareceria normal no tamanho.
+async function medirAptidao() {
+  if (document.visibilityState !== 'visible') {
+    return { apta: false, motivo: 'A aba está em segundo plano. Traga esta janela para a frente e não saia dela durante a gravação.' };
+  }
+  const inicio = performance.now();
+  let quadros = 0;
+  await new Promise((resolve) => {
+    const passo = () => {
+      quadros += 1;
+      if (performance.now() - inicio > 400) return resolve();
+      requestAnimationFrame(passo);
+    };
+    requestAnimationFrame(passo);
+    setTimeout(resolve, 800);
+  });
+  const fps = quadros / ((performance.now() - inicio) / 1000);
+  if (fps < 30) {
+    return { apta: false, motivo: `O navegador está entregando ${Math.round(fps)} quadros por segundo nesta aba. Abaixo de 30 a tomada fica travada.` };
+  }
+  return { apta: true, fps: Math.round(fps) };
+}
+
+function avisar(texto) {
+  const bloco = document.querySelector('#aviso-aba');
+  const alvo = document.querySelector('#aviso-texto');
+  if (!bloco || !alvo) return;
+  bloco.hidden = !texto;
+  alvo.textContent = texto ?? '';
+}
+
 function escolherMime() {
   const candidatos = [
     'video/mp4;codecs=avc1.42E01E',
@@ -281,6 +320,15 @@ async function gravar(chave, ordemRota, segundos) {
   const formato = FORMATOS[chave];
   document.querySelectorAll('button').forEach((b) => { b.disabled = true; });
   dizer('preparando…');
+
+  const aptidao = await medirAptidao();
+  if (!aptidao.apta) {
+    avisar(aptidao.motivo);
+    dizer('gravação cancelada');
+    document.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+    return { cancelado: true, motivo: aptidao.motivo };
+  }
+  avisar(null);
 
   const rota = getRoute(Number(ordemRota));
   await carregarTokens();
@@ -333,6 +381,10 @@ async function gravar(chave, ordemRota, segundos) {
   gravador.start();
   const inicio = performance.now();
   let t = 0;
+  let quadrosPintados = 0;
+  let perdeuFoco = false;
+  const aoEsconder = () => { if (document.visibilityState !== 'visible') perdeuFoco = true; };
+  document.addEventListener('visibilitychange', aoEsconder);
   const dt = 1 / 60;
 
   await new Promise((resolve) => {
@@ -357,6 +409,7 @@ async function gravar(chave, ordemRota, segundos) {
         ctx.drawImage(jogo, caixa.x, caixa.y);
         desenharHud(ctx, cena, objetivo, caixa, escala);
       }
+      quadrosPintados += 1;
       dizer(`gravando ${(decorrido / 1000).toFixed(1)}s de ${segundos}s`);
       requestAnimationFrame(passo);
     };
@@ -365,6 +418,18 @@ async function gravar(chave, ordemRota, segundos) {
 
   gravador.stop();
   await new Promise((r) => { gravador.onstop = r; });
+  document.removeEventListener('visibilitychange', aoEsconder);
+
+  const fpsReal = quadrosPintados / segundos;
+  if (perdeuFoco || fpsReal < 30) {
+    const motivo = perdeuFoco
+      ? 'A aba perdeu o foco durante a gravação. A tomada foi descartada; refaça sem sair da janela.'
+      : `A tomada rendeu ${Math.round(fpsReal)} quadros por segundo, abaixo do mínimo de 30. Descartada.`;
+    avisar(motivo);
+    dizer('tomada descartada');
+    document.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+    return { descartado: true, motivo, fpsReal: Math.round(fpsReal) };
+  }
 
   const tipo = mime || 'video/webm';
   const blob = new Blob(partes, { type: tipo });
@@ -376,13 +441,13 @@ async function gravar(chave, ordemRota, segundos) {
   link.textContent = `Baixar ${nome} — ${formato.largura}×${formato.altura}, ${(blob.size / 1024 / 1024).toFixed(1)} MB`;
   saida.append(link);
 
-  conferir(chave, { formato, blob, segundos, tipo, fluxo, alturaFinal: run.score });
+  conferir(chave, { formato, blob, segundos, tipo, fluxo, alturaFinal: run.score, fpsReal: Math.round(fpsReal) });
   dizer(`pronto: ${chave}`);
   document.querySelectorAll('button').forEach((b) => { b.disabled = false; });
   return { chave, bytes: blob.size, tipo };
 }
 
-function conferir(chave, { formato, blob, segundos, tipo, fluxo, alturaFinal }) {
+function conferir(chave, { formato, blob, segundos, tipo, fluxo, alturaFinal, fpsReal }) {
   const alvoLargura = chave === 'landscape' ? 1920 : 1080;
   const linhas = [
     ['Formato', `${formato.largura}×${formato.altura}`, formato.largura >= alvoLargura],
@@ -391,6 +456,7 @@ function conferir(chave, { formato, blob, segundos, tipo, fluxo, alturaFinal }) 
     ['Faixas de áudio', String(fluxo.getAudioTracks().length), fluxo.getAudioTracks().length === 0],
     ['Contêiner', tipo.includes('mp4') ? 'MP4' : 'WebM — converter', tipo.includes('mp4')],
     ['Gameplay real', `subiu até ${alturaFinal} m`, alturaFinal > 20],
+    ['Quadros por segundo', `${fpsReal}`, fpsReal >= 30],
   ];
   const html = [`<tr><th colspan="3">${chave}</th></tr>`];
   for (const [rotulo, valor, ok] of linhas) {
@@ -402,6 +468,12 @@ function conferir(chave, { formato, blob, segundos, tipo, fluxo, alturaFinal }) 
 
 const formatoEscolhido = () => document.querySelector('input[name="formato"]:checked').value;
 const duracaoEscolhida = () => Number(document.querySelector('#duracao').value);
+
+medirAptidao().then((a) => { if (!a.apta) avisar(a.motivo); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') avisar('A aba saiu do primeiro plano. Volte a ela antes de gravar.');
+  else medirAptidao().then((a) => avisar(a.apta ? null : a.motivo));
+});
 
 document.querySelector('#btn-gravar').addEventListener('click', () => {
   gravar(formatoEscolhido(), seletorRota.value, duracaoEscolhida());
