@@ -1,5 +1,6 @@
 import { createPlatform } from './model.js';
 import { PLAYER_BOUNCE, PLAYER_GRAVITY, PLAYER_MAX_SPEED, PLAYER_ACCELERATION } from './player.js';
+import { STAGE_WIDTH, STAGE_HEIGHT } from './stage.js';
 
 const ROW_RISE = 87.5;
 
@@ -54,7 +55,7 @@ export function constrainRouteX({
   previousCentre,
   candidateX,
   width,
-  stageWidth = 360,
+  stageWidth = STAGE_WIDTH,
   motionRange = 0,
   segment,
   reachScale = null,
@@ -80,8 +81,8 @@ export function getRouteSegment(altitudeMeters = 0) {
 }
 
 export function createWorld(seed = 1, {
-  width = 360,
-  height = 640,
+  width = STAGE_WIDTH,
+  height = STAGE_HEIGHT,
   platformCount,
   reachScale = null,
   hazards = null,

@@ -1,8 +1,7 @@
 import { readInput } from '../input.js';
 import { createFeedbackState, stepFeedback } from './feedback.js';
 
-const LOGICAL_WIDTH = 360;
-const LOGICAL_HEIGHT = 640;
+import { STAGE_WIDTH as LOGICAL_WIDTH, STAGE_HEIGHT as LOGICAL_HEIGHT } from './stage.js';
 
 export function advanceCamera(run, viewportHeight) {
   const current = run.cameraY ?? 0;

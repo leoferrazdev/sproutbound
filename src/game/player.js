@@ -1,3 +1,5 @@
+import { STAGE_WIDTH } from './stage.js';
+
 export const PLAYER_GRAVITY = 950;
 export const PLAYER_BOUNCE = -420;
 export const PLAYER_MAX_SPEED = 150;
@@ -19,7 +21,7 @@ export function createPlayer({ x, y }) {
 // Cópias do jogador que existem em tela ao mesmo tempo. Quando Pip atravessa a
 // borda ele aparece dos dois lados, e precisa colidir dos dois lados: envoltória
 // que desenha mas não colide é injustiça pior que a parede que ela substituiu.
-export function playerGhosts(player, stageWidth = 360) {
+export function playerGhosts(player, stageWidth = STAGE_WIDTH) {
   const width = player.width ?? 0;
   const ghosts = [player];
   if (player.x < 0) ghosts.push({ ...player, x: player.x + stageWidth });

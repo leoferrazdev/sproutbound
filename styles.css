@@ -60,9 +60,11 @@ canvas {
 .stage-shell {
   position: relative;
   display: grid;
-  width: min(100vw, 56.25svh);
-  height: min(100svh, 177.78vw);
-  aspect-ratio: 9 / 16;
+  /* 3:4 em vez de 9:16: no desktop o palco passa de 405 px para 540 px de largura
+     numa janela de 1280x720, deixando de ser uma coluna estreita ao lado do fundo. */
+  width: min(100vw, 75svh);
+  height: min(100svh, 133.34vw);
+  aspect-ratio: 3 / 4;
   min-width: min(240px, 100vw);
   min-height: min(426px, 100svh);
   overflow: hidden;

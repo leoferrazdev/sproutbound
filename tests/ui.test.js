@@ -38,7 +38,8 @@ test('shell exposes accessible HUD, objective, pause state and explicit restart'
 test('responsive shell keeps portrait aspect ratio and safe-area behavior', async () => {
   const css = await readFile(cssPath, 'utf8');
 
-  assert.match(css, /aspect-ratio\s*:\s*9\s*\/\s*16/);
+  // o palco passou de 9:16 para 3:4 para ocupar mais largura no desktop
+  assert.match(css, /aspect-ratio\s*:\s*3\s*\/\s*4/);
   assert.match(css, /safe-area-inset/);
   assert.match(css, /touch-action/);
   assert.match(css, /user-select/);

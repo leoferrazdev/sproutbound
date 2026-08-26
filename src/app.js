@@ -11,6 +11,7 @@ import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
 import { createCampaignScreen } from './ui/campaign-screen.js';
 import { createPlatformAdapter } from './platform-adapter.js';
+import { STAGE_WIDTH, STAGE_HEIGHT } from './game/stage.js';
 import { createTranslator, getPreferredLanguage, routeLabel } from './i18n.js';
 import { createAudio } from './audio.js';
 
@@ -31,16 +32,19 @@ export function createApp(
     throw new Error('Game root not found');
   }
 
-  let canvas = gameRoot.querySelector('canvas');
+  // Buscar dentro do palco, e não em #game: desde que o canvas de fundo virou o
+  // primeiro filho de #game, um querySelector('canvas') genérico devolvia ele, e
+  // o jogo passava a desenhar no lugar errado.
+  const stageShell = gameRoot.querySelector('.stage-shell');
+  let canvas = gameRoot.querySelector('#game-canvas') ?? stageShell?.querySelector('canvas') ?? null;
   if (!canvas) {
     canvas = documentRef.createElement('canvas');
     canvas.id = 'game-canvas';
-    canvas.setAttribute('aria-label', 'Jogo Salto ao Sol');
-    gameRoot.querySelector('.stage-shell')?.append(canvas);
+    stageShell?.append(canvas);
   }
 
-  canvas.width = 360;
-  canvas.height = 640;
+  canvas.width = STAGE_WIDTH;
+  canvas.height = STAGE_HEIGHT;
   const translator = createTranslator(getPreferredLanguage(documentRef.defaultView));
   documentRef.documentElement.lang = translator.locale === 'pt' ? 'pt-BR' : 'en';
   documentRef.title = translator.t('title');
@@ -223,8 +227,8 @@ export function createApp(
   const resize = () => {
     const view = documentRef.defaultView;
     const dpr = view?.devicePixelRatio || 1;
-    renderer.resize({ width: canvas.clientWidth || 360, height: canvas.clientHeight || 640, dpr });
-    backdrop.resize({ width: view?.innerWidth || 360, height: view?.innerHeight || 640, dpr });
+    renderer.resize({ width: canvas.clientWidth || STAGE_WIDTH, height: canvas.clientHeight || STAGE_HEIGHT, dpr });
+    backdrop.resize({ width: view?.innerWidth || STAGE_WIDTH, height: view?.innerHeight || STAGE_HEIGHT, dpr });
     backdrop.render(simulation.run);
   };
   resize();

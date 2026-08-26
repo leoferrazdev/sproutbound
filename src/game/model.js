@@ -1,6 +1,7 @@
 import { createWorld } from './world.js';
 import { createDefaultProgress, getMilestone, getVisualTier, countRoutesCleared, PROGRESS_VERSION } from './progression.js';
 import { getFirstRoute, getRouteRows, createObjectiveTracker } from './campaign.js';
+import { STAGE_WIDTH, STAGE_HEIGHT } from './stage.js';
 
 export function createPlatform({ x, y, width, kind = 'leaf' }) {
   return {
@@ -18,8 +19,8 @@ export function createRun(seedOrRoute = null, progress = createDefaultProgress()
     ? seedOrRoute
     : { ...getFirstRoute(), seed: Number.isFinite(seedOrRoute) ? seedOrRoute : getFirstRoute().seed };
   const entities = createWorld(route.seed, {
-    width: 360,
-    height: 640,
+    width: STAGE_WIDTH,
+    height: STAGE_HEIGHT,
     platformCount: getRouteRows(route),
     reachScale: route.reachScale,
     hazards: route.hazards,

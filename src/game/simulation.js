@@ -1,6 +1,7 @@
 import { PLAYER_BOUNCE, rectsOverlap, stepPlayer, playerGhosts } from './player.js';
+import { STAGE_WIDTH, STAGE_HEIGHT } from './stage.js';
 
-const WORLD_BOUNDS = { width: 360, height: 640 };
+const WORLD_BOUNDS = { width: STAGE_WIDTH, height: STAGE_HEIGHT };
 export const HEIGHT_PIXELS_PER_METER = 12;
 export const CRACKED_LEAF_COLLAPSE_SECONDS = 0.45;
 export const FIXED_LEAF_IMPACT_SECONDS = 0.18;

@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 
 import { wrapX, wrappedDistance, playerGhosts, stepPlayer, createPlayer, rectsOverlap, PLAYER_MAX_SPEED } from '../src/game/player.js';
 import { stepRun } from '../src/game/simulation.js';
+import { STAGE_WIDTH } from '../src/game/stage.js';
 
-const STAGE = 360;
+const STAGE = STAGE_WIDTH;
 const WIDTH = 26;
 
 test('sair por uma borda reentra pela outra sem descontinuidade', () => {
@@ -25,21 +26,34 @@ test('a envoltória é contínua: nenhum salto entre passos vizinhos', () => {
 });
 
 test('dar a volta pode ser o caminho curto', () => {
-  assert.equal(wrappedDistance(20, 340, STAGE), 40);
-  assert.equal(wrappedDistance(160, 200, STAGE), 40, 'no meio o caminho direto vence');
-  assert.equal(wrappedDistance(0, 180, STAGE), 180, 'lados opostos empatam');
+  // expresso em função da largura: o teste continua valendo se o palco mudar
+  const perto = 20;
+  assert.equal(wrappedDistance(perto, STAGE - perto, STAGE), perto * 2, 'pelas bordas é mais curto');
+  assert.equal(wrappedDistance(STAGE / 2 - 20, STAGE / 2 + 20, STAGE), 40, 'no meio o caminho direto vence');
+  assert.equal(wrappedDistance(0, STAGE / 2, STAGE), STAGE / 2, 'lados opostos empatam');
 });
 
 test('atravessando a borda Pip existe dos dois lados', () => {
-  assert.deepEqual(playerGhosts({ x: 180, width: WIDTH }, STAGE).map((g) => g.x), [180]);
-  assert.deepEqual(playerGhosts({ x: -13, width: WIDTH }, STAGE).map((g) => g.x), [-13, 347]);
-  assert.deepEqual(playerGhosts({ x: 350, width: WIDTH }, STAGE).map((g) => g.x), [350, -10]);
+  const meio = STAGE / 2;
+  assert.deepEqual(playerGhosts({ x: meio, width: WIDTH }, STAGE).map((g) => g.x), [meio], 'no meio há só um');
+  const esquerda = -WIDTH / 2;
+  assert.deepEqual(
+    playerGhosts({ x: esquerda, width: WIDTH }, STAGE).map((g) => g.x),
+    [esquerda, esquerda + STAGE],
+    'saindo pela esquerda aparece à direita',
+  );
+  const direita = STAGE - WIDTH / 2;
+  assert.deepEqual(
+    playerGhosts({ x: direita, width: WIDTH }, STAGE).map((g) => g.x),
+    [direita, direita - STAGE],
+    'saindo pela direita aparece à esquerda',
+  );
 });
 
 test('a cópia da borda colide, não é só desenho', () => {
   // Envoltória que aparece mas não colide é injustiça pior que a parede.
   const player = { x: -13, y: 100, width: WIDTH, height: 34 };
-  const folhaNaOutraBorda = { x: 340, y: 100, width: 20, height: 18 };
+  const folhaNaOutraBorda = { x: STAGE - 20, y: 100, width: 20, height: 18 };
   assert.equal(rectsOverlap(player, folhaNaOutraBorda), false, 'a posição crua não alcança');
   assert.ok(
     playerGhosts(player, STAGE).some((ghost) => rectsOverlap(ghost, folhaNaOutraBorda)),
@@ -76,7 +90,7 @@ test('aterrissar continua funcionando com a envoltória ativa', () => {
     cameraY: 0,
     nextUnlock: null,
     player: { ...createPlayer({ x: -10, y: 80 }), grounded: false, vy: 220 },
-    platforms: [{ x: 336, y: 120, width: 24, height: 18, kind: 'leaf' }],
+    platforms: [{ x: STAGE - 24, y: 120, width: 24, height: 18, kind: 'leaf' }],
     thorns: [],
     sunDrops: [],
   };

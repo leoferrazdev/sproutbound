@@ -6,7 +6,7 @@ const KEY_DIRECTIONS = new Map([
   ['ArrowRight', 'right'],
   ['KeyD', 'right'],
 ]);
-const LOGICAL_WIDTH = 360;
+import { STAGE_WIDTH as LOGICAL_WIDTH } from './game/stage.js';
 
 export function createInputState() {
   return {

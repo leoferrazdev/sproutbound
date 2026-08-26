@@ -2,8 +2,7 @@ import { PULSE_SECONDS, pulseProgress } from '../game/feedback.js';
 import { getBiome } from '../game/campaign.js';
 import { playerGhosts } from '../game/player.js';
 
-const LOGICAL_WIDTH = 360;
-const LOGICAL_HEIGHT = 640;
+import { STAGE_WIDTH as LOGICAL_WIDTH, STAGE_HEIGHT as LOGICAL_HEIGHT } from '../game/stage.js';
 const CRACKED_LEAF_COLLAPSE_SECONDS = 0.45;
 const FIXED_LEAF_IMPACT_SECONDS = 0.18;
 

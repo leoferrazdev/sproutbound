@@ -41,7 +41,7 @@
 <h1>Gravador de preview</h1>
 <p class="sub">
   Grava o jogo real, sem som, abrindo na capa estática. O enquadramento é o mesmo do
-  desktop: o fundo do bioma preenche o quadro inteiro e a coluna jogável 9:16 fica
+  desktop: o fundo do bioma preenche o quadro inteiro e a área jogável 3:4 fica
   centralizada — sem barras pretas e sem cortar a área de jogo.
 </p>
 
@@ -89,9 +89,7 @@ import { createCanvasRenderer, createBackdropRenderer } from '../src/render/canv
 import { createFeedbackState, stepFeedback } from '../src/game/feedback.js';
 import { getRoutes, getRoute, getBiome, createObjectiveTracker, trackObjective } from '../src/game/campaign.js';
 import { createTranslator, objectiveText, routeLabel } from '../src/i18n.js';
-
-const STAGE_W = 360;
-const STAGE_H = 640;
+import { STAGE_WIDTH as STAGE_W, STAGE_HEIGHT as STAGE_H } from '../src/game/stage.js';
 const CAPA_MS = 1300;
 
 const FORMATOS = {
@@ -199,10 +197,17 @@ async function gravar(chave, ordemRota, segundos) {
 
   // palco 9:16 centralizado, fundo do bioma preenchendo o quadro: mesmo
   // enquadramento do desktop, sem barra preta e sem cortar a área de jogo.
-  const alturaPalco = formato.altura;
-  const larguraPalco = Math.round(alturaPalco * (STAGE_W / STAGE_H));
-  const escala = alturaPalco / STAGE_H;
-  const caixa = { x: Math.round((formato.largura - larguraPalco) / 2), y: 0, w: larguraPalco, h: alturaPalco };
+  // Ajustar pelo lado que limita. Em 3:4 o palco estoura a largura do quadro
+  // portrait se for dimensionado só pela altura.
+  const escala = Math.min(formato.largura / STAGE_W, formato.altura / STAGE_H);
+  const larguraPalco = Math.round(STAGE_W * escala);
+  const alturaPalco = Math.round(STAGE_H * escala);
+  const caixa = {
+    x: Math.round((formato.largura - larguraPalco) / 2),
+    y: Math.round((formato.altura - alturaPalco) / 2),
+    w: larguraPalco,
+    h: alturaPalco,
+  };
 
   const jogo = document.querySelector('#game-canvas');
   jogo.width = larguraPalco;

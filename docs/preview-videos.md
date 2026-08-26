@@ -53,8 +53,9 @@ npm run gate
 - Drives the real game, not a mock. The autopilot dodges thorns and chases the nearest
   reachable leaf, so a take never shows an early death.
 - Frames it the way the desktop game actually looks: the biome backdrop fills the frame
-  and the 9:16 playable column sits centred. No black bars, and no cropping of the play
-  area.
+  and the 3:4 playable area sits centred, scaled by whichever side limits it. No black
+  bars, and no cropping of the play area. Landscape gives the stage 810 of 1920 px;
+  portrait fills the full 1080 px width.
 - Draws the real HUD — route, height and the route goal. Those are game elements, not
   promotional text.
 - Records with no audio track at all.
@@ -72,7 +73,8 @@ ffmpeg -i input.webm -c:v libx264 -crf 20 -pix_fmt yuv420p -an output.mp4
 - **The run dies early**: pick a lower-numbered route. The autopilot is competent, not
   perfect, and later routes are tighter.
 - **Too much backdrop on the sides in landscape**: that is how the game looks on a desktop
-  today. Changing it for the video would misrepresent the game, which the guidelines
-  forbid. Fix it in the game first if it bothers you.
+  today. Changing it for the video alone would misrepresent the game, which the guidelines
+  forbid — widen the stage in `src/game/stage.js` instead, then re-run `npm run gate` to
+  confirm every route still completes.
 - **The file is large**: lower `videoBitsPerSecond` in the tool. The 50 MB ceiling is
   generous for 17 seconds of flat-colour art.
