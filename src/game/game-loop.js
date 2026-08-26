@@ -30,7 +30,7 @@ export function createGameLoop({ canvas, simulation, renderer, ui, input }) {
       right: axis > 0,
       primary: normalizedInput.primary,
     }, elapsed);
-    feedback = stepFeedback(feedback, result.events, elapsed);
+    feedback = stepFeedback(feedback, result.events, elapsed, { player: result.run.player });
     simulation.run = {
       ...result.run,
       feedback,

@@ -1,0 +1,382 @@
+// Release Gate CrazyGames — executável.
+//
+// As duas recusas do Sproutbound não vieram de análise errada: vieram de submeter
+// com o gate aberto, porque o gate era uma lista em markdown que alguém marcava.
+// Este arquivo torna o gate mecânico. O que dá para medir, ele mede. O que depende
+// de uma pessoa abrir o jogo, ele exige registrado com data, navegador e commit —
+// e recusa registros de outro commit.
+//
+// Uso:  node tools/check-gate.mjs
+// Saída: 0 somente se todos os itens passarem.
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+import { createRun } from '../src/game/model.js';
+import { stepRun } from '../src/game/simulation.js';
+import { createWorld } from '../src/game/world.js';
+import { getMilestones } from '../src/game/progression.js';
+import { createFeedbackState, stepFeedback, PULSE_SECONDS } from '../src/game/feedback.js';
+import { createCanvasRenderer } from '../src/render/canvas-renderer.js';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const MANUAL_LOG = path.join(ROOT, 'docs', 'gate-manual-evidence.json');
+
+export const THRESHOLDS = Object.freeze({
+  contentSeconds: 360,
+  maxRewardGapSeconds: 90,
+  maxMilestonesInFirstMinute: 2,
+  seedSamples: 25,
+  reachabilitySamples: 100,
+  minCompletionRate: 0.98,
+  coverFormats: [
+    { id: 'landscape', width: 1920, height: 1080 },
+    { id: 'portrait', width: 800, height: 1200 },
+    { id: 'square', width: 800, height: 800 },
+  ],
+  video: { minSeconds: 15, maxSeconds: 20, minLandscapeWidth: 1920, minPortraitWidth: 1080, maxBytes: 50 * 1024 * 1024 },
+  manualItems: [
+    'preview-tool',
+    'console-clean-10min',
+    'fps-stable-10min',
+    'desktop-occupancy',
+    'playtest-five-strangers',
+  ],
+});
+
+// ---------------------------------------------------------------- utilidades
+
+function currentCommit() {
+  try {
+    return execSync('git rev-parse HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function readFileSafe(relative) {
+  try {
+    return fs.readFileSync(path.join(ROOT, relative), 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+// Agente determinístico: persegue a plataforma alcançável mais próxima acima.
+// Não é um jogador humano, é um limite superior — se nem ele estica o conteúdo,
+// nenhum humano estica.
+export function playToExhaustion({ seed = 1, maxSeconds = 900, dt = 1 / 60 } = {}) {
+  let run = createRun(seed, { bestHeight: 0, unlocked: [] });
+  let result = stepRun(run, { left: false, right: false, primary: true }, 0);
+  run = result.run;
+
+  let elapsed = 0;
+  const milestoneTimes = [];
+  let lastRewardAt = 0;
+  let maxRewardGap = 0;
+
+  while (elapsed < maxSeconds && run.state === 'playing') {
+    const player = run.player;
+    const platforms = run.platforms ?? [];
+    const above = platforms
+      .filter((p) => p.y < player.y - 4 && !p.collapsed && p.kind !== 'thorn-leaf')
+      .sort((a, b) => b.y - a.y)[0];
+
+    // O agente precisa ser competente para servir de medida: mira no lado da
+    // folha oposto ao espinho da mesma linha, em vez de no centro geométrico.
+    let target = 180;
+    if (above) {
+      target = above.x + above.width / 2;
+      const thorn = platforms.find((p) => p.kind === 'thorn-leaf' && Math.abs(p.y - above.y) < 2);
+      if (thorn) {
+        const margin = player.width / 2 + 4;
+        const safeSpan = Math.max(0, above.width / 2 - margin);
+        target = thorn.x > above.x ? above.x + margin : above.x + above.width - margin;
+        if (safeSpan <= 0) target = above.x + above.width / 2;
+      }
+    }
+    const centre = player.x + player.width / 2;
+
+    result = stepRun(run, { left: centre - target > 6, right: target - centre > 6, primary: false }, dt);
+    run = result.run;
+    elapsed += dt;
+
+    for (const event of result.events) {
+      if (event === 'milestoneReached' || event === 'summitReached') {
+        milestoneTimes.push(Number(elapsed.toFixed(2)));
+        maxRewardGap = Math.max(maxRewardGap, elapsed - lastRewardAt);
+        lastRewardAt = elapsed;
+      }
+    }
+  }
+
+  return {
+    seconds: Number(elapsed.toFixed(2)),
+    height: run.score,
+    endState: run.state,
+    milestoneTimes,
+    milestonesInFirstMinute: milestoneTimes.filter((t) => t <= 60).length,
+    maxRewardGap: Number(Math.max(maxRewardGap, elapsed - lastRewardAt).toFixed(2)),
+  };
+}
+
+export function worldSignature(seed) {
+  return createWorld(seed, { platformCount: 60 })
+    .map((e) => `${e.type}:${e.kind ?? ''}:${Math.round(e.x)}:${Math.round(e.y)}`)
+    .join('|');
+}
+
+function pngSize(buffer) {
+  if (buffer.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') return null;
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
+
+function mp4Info(buffer) {
+  const info = { seconds: null, width: null, hasAudio: buffer.includes(Buffer.from('mp4a')) };
+  const walk = (start, end) => {
+    let p = start;
+    while (p + 8 <= end) {
+      let size = buffer.readUInt32BE(p);
+      const type = buffer.toString('latin1', p + 4, p + 8);
+      if (size === 1) size = Number(buffer.readBigUInt64BE(p + 8));
+      if (size < 8 || p + size > end) break;
+      if (type === 'mvhd') {
+        const version = buffer[p + 8];
+        const scale = version === 1 ? buffer.readUInt32BE(p + 28) : buffer.readUInt32BE(p + 20);
+        const duration = version === 1 ? Number(buffer.readBigUInt64BE(p + 32)) : buffer.readUInt32BE(p + 24);
+        if (scale) info.seconds = Number((duration / scale).toFixed(2));
+      }
+      if (type === 'tkhd') {
+        const version = buffer[p + 8];
+        const offset = version === 1 ? p + 8 + 92 : p + 8 + 80;
+        const width = buffer.readUInt32BE(offset) / 65536;
+        if (width > 0) info.width = Math.round(width);
+      }
+      if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(type)) walk(p + 8, p + size);
+      p += size;
+    }
+  };
+  walk(0, buffer.length);
+  return info;
+}
+
+// ------------------------------------------------------------------- checagens
+
+const checks = [];
+const check = (id, title, run) => checks.push({ id, title, run });
+
+check('P0-1', 'Conteúdo passa de 6 minutos', () => {
+  const session = playToExhaustion();
+  const ok = session.seconds >= THRESHOLDS.contentSeconds;
+  return {
+    ok,
+    detail: `agente exauriu o conteúdo em ${session.seconds}s (${session.height} m, estado ${session.endState}); mínimo ${THRESHOLDS.contentSeconds}s`,
+  };
+});
+
+check('P0-2', 'Mundo varia entre partidas', () => {
+  const source = readFileSafe('src/app.js') ?? '';
+  const fixedSeed = [...source.matchAll(/createRun\(\s*(\d+)\s*,/g)].map((m) => m[1]);
+  const signatures = new Set();
+  for (let seed = 1; seed <= THRESHOLDS.seedSamples; seed += 1) signatures.add(worldSignature(seed));
+  const varies = signatures.size === THRESHOLDS.seedSamples;
+
+  // Variar sem garantir alcançabilidade é pior que semente fixa: entrega partidas
+  // invencíveis. Antes desta guarda, 13 de 50 sementes eram impossíveis.
+  const unbeatable = [];
+  for (let seed = 1; seed <= THRESHOLDS.reachabilitySamples; seed += 1) {
+    if (playToExhaustion({ seed, maxSeconds: 180 }).endState !== 'summit') unbeatable.push(seed);
+  }
+  const rate = (THRESHOLDS.reachabilitySamples - unbeatable.length) / THRESHOLDS.reachabilitySamples;
+  const reachable = rate >= THRESHOLDS.minCompletionRate;
+  const ok = fixedSeed.length === 0 && varies && reachable;
+
+  const problems = [];
+  if (fixedSeed.length) problems.push(`src/app.js ainda chama createRun com semente literal: ${fixedSeed.join(', ')}`);
+  if (!varies) problems.push(`apenas ${signatures.size}/${THRESHOLDS.seedSamples} sementes produzem mundos distintos`);
+  if (!reachable) problems.push(`${unbeatable.length}/${THRESHOLDS.reachabilitySamples} sementes invencíveis pelo agente: ${unbeatable.slice(0, 6).join(', ')}`);
+
+  return {
+    ok,
+    detail: problems.length
+      ? problems.join('; ')
+      : `${signatures.size} mundos distintos e ${Math.round(rate * 100)}% das ${THRESHOLDS.reachabilitySamples} sementes completáveis`,
+  };
+});
+
+check('P0-3', 'Todo evento de gameplay chega ao renderer', () => {
+  const EVENT_BY_PULSE = {
+    impact: 'platformImpact',
+    collect: 'collectedSun',
+    shield: 'solarShieldReady',
+    milestone: 'milestoneReached',
+    death: 'playerDied',
+  };
+  const player = { x: 160, y: 320, width: 26, height: 34, grounded: true, dead: false };
+
+  // Contexto falso que apenas conta operações de desenho. Grep é burlável;
+  // contagem de chamadas não é. Se um pulso não muda a contagem, ele não chega
+  // ao pixel, independente do que o código pareça fazer.
+  const drawCount = (feedback) => {
+    let calls = 0;
+    const context = new Proxy({}, {
+      get: (_target, prop) => {
+        if (prop === 'createLinearGradient') return () => ({ addColorStop: () => {} });
+        if (prop === 'canvas') return { width: 360, height: 640 };
+        if (typeof prop === 'string' && /^(fill|stroke|arc|moveTo|lineTo|rect|ellipse|quadraticCurveTo|closePath)/.test(prop)) {
+          return () => { calls += 1; };
+        }
+        return () => undefined;
+      },
+      set: () => true,
+    });
+    const renderer = createCanvasRenderer({ width: 360, height: 640, getContext: () => context });
+    renderer.resize({ width: 360, height: 640, dpr: 1 });
+    renderer.render({ player, platforms: [], sunDrops: [], thorns: [], cameraY: 0, feedback });
+    return calls;
+  };
+
+  const baseline = drawCount(createFeedbackState());
+  const silent = [];
+  for (const [pulse, event] of Object.entries(EVENT_BY_PULSE)) {
+    const active = stepFeedback(createFeedbackState(), [event], PULSE_SECONDS[pulse] * 0.35, { player });
+    if (drawCount(active) <= baseline) silent.push(pulse);
+  }
+  return {
+    ok: silent.length === 0,
+    detail: silent.length
+      ? `pulsos que não alteram nada em tela: ${silent.join(', ')}`
+      : `${Object.keys(EVENT_BY_PULSE).length} pulsos alteram o desenho (base ${baseline} chamadas)`,
+  };
+});
+
+check('P1-1', 'Trilha musical presente e mute exposto', () => {
+  const audio = readFileSafe('src/audio.js') ?? '';
+  const html = readFileSafe('index.html') ?? '';
+  const hasMusic = /music|bed|loop|ambience/i.test(audio);
+  const hasMuteControl = /id="mute|data-action="mute|aria-label="[^"]*(?:mute|sound|audio)/i.test(html);
+  return {
+    ok: hasMusic && hasMuteControl,
+    detail: `${hasMusic ? 'leito musical presente' : 'sem leito musical'}; ${hasMuteControl ? 'controle de mute na interface' : 'sem controle de mute na interface'}`,
+  };
+});
+
+check('P1-3', 'Progressão distribuída ao longo da sessão', () => {
+  const session = playToExhaustion();
+  const okCount = session.milestonesInFirstMinute <= THRESHOLDS.maxMilestonesInFirstMinute;
+  const okGap = session.maxRewardGap <= THRESHOLDS.maxRewardGapSeconds;
+  return {
+    ok: okCount && okGap,
+    detail: `${session.milestonesInFirstMinute} marcos no primeiro minuto (máx ${THRESHOLDS.maxMilestonesInFirstMinute}); maior intervalo entre recompensas ${session.maxRewardGap}s (máx ${THRESHOLDS.maxRewardGapSeconds}s); total de marcos ${getMilestones().length}`,
+  };
+});
+
+check('P1-4', 'Menu, pausa e retomada por perda de foco', () => {
+  const html = readFileSafe('index.html') ?? '';
+  const sources = ['src/app.js', 'src/input.js', 'src/game/game-loop.js', 'src/ui/screens.js']
+    .map((f) => readFileSafe(f) ?? '').join('\n');
+  const hasPauseScreen = /id="pause-screen"|id="menu-screen"/.test(html);
+  const pausesOnHide = /visibilitychange[\s\S]{0,400}?(pause|loop\.pause|pauseInput)/.test(sources);
+  return {
+    ok: hasPauseScreen && pausesOnHide,
+    detail: `${hasPauseScreen ? 'telas de menu/pausa presentes' : 'sem tela de menu ou pausa'}; ${pausesOnHide ? 'pausa ao perder visibilidade' : 'perder a aba não pausa a partida'}`,
+  };
+});
+
+check('MEDIA-1', 'Capas nos três formatos exigidos', () => {
+  const problems = [];
+  for (const format of THRESHOLDS.coverFormats) {
+    const file = path.join(ROOT, 'media', 'covers', `sproutbound-${format.id}.png`);
+    if (!fs.existsSync(file)) { problems.push(`${format.id} ausente`); continue; }
+    const size = pngSize(fs.readFileSync(file));
+    if (!size) { problems.push(`${format.id} não é PNG`); continue; }
+    if (size.width !== format.width || size.height !== format.height) {
+      problems.push(`${format.id} é ${size.width}x${size.height}, exigido ${format.width}x${format.height}`);
+    }
+  }
+  return { ok: problems.length === 0, detail: problems.length ? problems.join('; ') : 'três capas nas dimensões exigidas' };
+});
+
+check('P0-4', 'Vídeos de preview dentro da especificação', () => {
+  const wanted = [
+    { id: 'landscape', minWidth: THRESHOLDS.video.minLandscapeWidth },
+    { id: 'portrait', minWidth: THRESHOLDS.video.minPortraitWidth },
+  ];
+  const problems = [];
+  for (const item of wanted) {
+    const candidates = ['media/videos/sproutbound-' + item.id + '-preview-final.mp4', 'media/videos/sproutbound-' + item.id + '-preview.mp4'];
+    const found = candidates.map((c) => path.join(ROOT, c)).find((f) => fs.existsSync(f));
+    if (!found) { problems.push(`${item.id}: nenhum vídeo encontrado`); continue; }
+    const buffer = fs.readFileSync(found);
+    const info = mp4Info(buffer);
+    const name = path.basename(found);
+    if (info.seconds === null || info.seconds < THRESHOLDS.video.minSeconds || info.seconds > THRESHOLDS.video.maxSeconds) {
+      problems.push(`${name}: ${info.seconds}s, exigido ${THRESHOLDS.video.minSeconds}-${THRESHOLDS.video.maxSeconds}s`);
+    }
+    if (info.width === null || info.width < item.minWidth) {
+      problems.push(`${name}: ${info.width}px de largura, exigido ${item.minWidth}px`);
+    }
+    if (info.hasAudio) problems.push(`${name}: contém faixa de áudio, o portal exige sem som`);
+    if (buffer.length > THRESHOLDS.video.maxBytes) problems.push(`${name}: acima de 50 MB`);
+  }
+  return { ok: problems.length === 0, detail: problems.length ? problems.join('; ') : 'dois vídeos dentro da especificação' };
+});
+
+check('PORTAL-1', 'Sem branding de outro portal no runtime', () => {
+  const runtime = ['index.html', 'styles.css', 'src/app.js', 'src/main.js', 'src/platform-adapter.js']
+    .map((f) => `${f}\n${readFileSafe(f) ?? ''}`).join('\n');
+  const hits = ['poki', 'gamedistribution', 'gd_options', 'gamepix', 'kongregate', 'armorgames']
+    .filter((portal) => new RegExp(portal, 'i').test(runtime));
+  return { ok: hits.length === 0, detail: hits.length ? `portais citados no runtime: ${hits.join(', ')}` : 'runtime neutro' };
+});
+
+check('MANUAL', 'Evidência manual registrada para o commit atual', () => {
+  const commit = currentCommit();
+  if (!fs.existsSync(MANUAL_LOG)) {
+    return { ok: false, detail: `docs/gate-manual-evidence.json ausente; itens que exigem pessoa: ${THRESHOLDS.manualItems.join(', ')}` };
+  }
+  let log;
+  try { log = JSON.parse(fs.readFileSync(MANUAL_LOG, 'utf8')); } catch { return { ok: false, detail: 'gate-manual-evidence.json inválido' }; }
+  const problems = [];
+  for (const item of THRESHOLDS.manualItems) {
+    const entry = log[item];
+    if (!entry) { problems.push(`${item}: não registrado`); continue; }
+    if (!entry.pass) { problems.push(`${item}: registrado como reprovado`); continue; }
+    if (!entry.date || !entry.browser || !entry.commit) { problems.push(`${item}: registro incompleto, exige date, browser e commit`); continue; }
+    if (commit && entry.commit !== commit) problems.push(`${item}: registrado no commit ${entry.commit.slice(0, 7)}, atual é ${commit.slice(0, 7)}`);
+  }
+  return { ok: problems.length === 0, detail: problems.length ? problems.join('; ') : `${THRESHOLDS.manualItems.length} itens manuais registrados para este commit` };
+});
+
+// ---------------------------------------------------------------------- saída
+
+export function runGate() {
+  return checks.map(({ id, title, run }) => {
+    try {
+      return { id, title, ...run() };
+    } catch (error) {
+      return { id, title, ok: false, detail: `erro ao avaliar: ${error.message}` };
+    }
+  });
+}
+
+function cli() {
+  const results = runGate();
+  const width = Math.max(...results.map((r) => r.title.length));
+  const lines = ['', 'Release Gate CrazyGames — Sproutbound', ''];
+  for (const result of results) {
+    lines.push(`  ${result.ok ? 'PASSA' : 'FALHA'}  ${result.id.padEnd(8)} ${result.title.padEnd(width)}  ${result.detail}`);
+  }
+  const failed = results.filter((r) => !r.ok);
+  lines.push('');
+  lines.push(failed.length
+    ? `  ${failed.length} de ${results.length} itens em aberto. SUBMISSÃO BLOQUEADA.`
+    : `  ${results.length} de ${results.length} itens fechados. Submissão liberada.`);
+  lines.push('');
+  process.stdout.write(lines.join('\n'));
+  process.exitCode = failed.length ? 1 : 0;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) cli();

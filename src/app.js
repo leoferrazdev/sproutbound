@@ -19,9 +19,22 @@ function getBrowserStorage(documentRef) {
   }
 }
 
+// Semente por partida. Determinismo continua disponível para teste injetando
+// seedSource; em produção cada partida gera um mundo diferente, porque mundo
+// idêntico a cada run transforma a terceira partida em memorização.
+export function createSeedSource() {
+  let previous = 0;
+  return () => {
+    let seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    if (seed === previous || seed === 0) seed = (seed + 0x9e3779b9) >>> 0;
+    previous = seed;
+    return seed;
+  };
+}
+
 export function createApp(
   documentRef,
-  { platformAdapterFactory = createPlatformAdapter } = {},
+  { platformAdapterFactory = createPlatformAdapter, seedSource = createSeedSource() } = {},
 ) {
   const gameRoot = documentRef.querySelector('#game');
   if (!gameRoot) {
@@ -58,7 +71,7 @@ export function createApp(
   const renderer = createCanvasRenderer(canvas);
   const safeStorage = createSafeStorage(getBrowserStorage(documentRef));
   let progress = safeStorage.load();
-  const simulation = { run: createRun(1, progress), stepRun };
+  const simulation = { run: createRun(seedSource(), progress), stepRun };
   const audio = createAudio({ windowRef: documentRef.defaultView });
   let loop;
   const platformAdapter = platformAdapterFactory({
@@ -77,7 +90,7 @@ export function createApp(
       input.pointerX = null;
       input.active = false;
       input.pressed = false;
-      simulation.run = createRun(1, progress);
+      simulation.run = createRun(seedSource(), progress);
       hud.update(simulation.run);
       hud.showNextObjective(simulation.run.nextUnlock);
       screens.showReady();

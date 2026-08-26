@@ -1,0 +1,8 @@
+{
+  "_comment": "Copie para gate-manual-evidence.json e preencha APÓS executar cada verificação. Marcar sem executar é a falha que causou a segunda recusa. O gate recusa registros feitos em outro commit.",
+  "preview-tool": { "pass": false, "date": "", "browser": "", "commit": "", "notes": "CrazyGames Preview Tool com o build final, sem apontamento bloqueante" },
+  "console-clean-10min": { "pass": false, "date": "", "browser": "", "commit": "", "notes": "Sessão de 10 min sem erro nem aviso relevante" },
+  "fps-stable-10min": { "pass": false, "date": "", "browser": "", "commit": "", "notes": "60 fps sustentados, sem crescimento de memória entre partidas" },
+  "desktop-occupancy": { "pass": false, "date": "", "browser": "", "commit": "", "notes": "Sem faixa vazia em 1280x720 e 1920x1080" },
+  "playtest-five-strangers": { "pass": false, "date": "", "browser": "", "commit": "", "notes": "5 pessoas fora do projeto; registrar quantas passaram de 60s e quantas iniciaram uma 3a partida por vontade propria" }
+}

@@ -364,11 +364,17 @@ test('moving sun drop updates before collection is resolved', () => {
 test('opening jump reaches the first target and aligns Pip feet with the leaf top', () => {
   const initial = createRun(1);
   const target = initial.platforms[1];
-  const direction = target.x < initial.player.x ? 'left' : 'right';
-  let result = stepRun(initial, { [direction]: true, primary: true }, 1 / 60);
+  const centre = target.x + target.width / 2;
+  // Dirigir em direção ao alvo, e não segurar uma direção fixa: com as folgas
+  // limitadas ao alcance real, manter a tecla pressionada ultrapassa a folha.
+  const steer = (player) => {
+    const current = player.x + player.width / 2;
+    return { left: current - centre > 4, right: centre - current > 4 };
+  };
+  let result = stepRun(initial, { ...steer(initial.player), primary: true }, 1 / 60);
 
   for (let frame = 0; frame < 90 && !result.events.includes('landed'); frame += 1) {
-    result = stepRun(result.run, { [direction]: true }, 1 / 60);
+    result = stepRun(result.run, steer(result.run.player), 1 / 60);
   }
 
   assert.ok(result.events.includes('landed'));

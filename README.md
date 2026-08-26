@@ -1,5 +1,15 @@
 # Sproutbound — Sunbound climb
 
+> [!DANGER] SUBMISSOES BLOQUEADAS — 2026-08-26
+> Segunda recusa consecutiva na CrazyGames com a mesma frase. Decisao registrada:
+> **reformular partes estruturais antes de qualquer novo envio, a qualquer portal.**
+>
+> O bloqueio e mecanico: `npm run gate` precisa sair com codigo 0. Hoje sai 1, com
+> 8 de 10 itens em aberto. Nenhum item pode ser marcado por opiniao.
+>
+> Diagnostico completo no cofre: `Diagnostico da segunda recusa CrazyGames - Sproutbound`.
+
+
 An English-first vertical arcade game for web browsers. Pip is a small sprout that automatically bounces between leaves, collects solar drops, charges a one-use solar shield, and climbs toward the summit. Portuguese remains available automatically when the browser locale starts with `pt-`; unsupported locales fall back to English.
 
 ## Run locally
@@ -43,6 +53,32 @@ Open `http://localhost:8080` in a browser. A local server is required because th
 - Full Launch: requires replacing the neutral adapter with the real CrazyGames SDK integration, including gameplay lifecycle events and monetization rules.
 - Submission media is in [`media/covers`](media/covers), with preparation notes in [`media/README.md`](media/README.md).
 
+## CrazyGames build
+
+Generate the portal-specific folder before using the CrazyGames upload dropzone:
+
+```powershell
+npm run build:crazygames
+```
+
+Upload the entire `submission/sproutbound-quality-0.2.0-crazygames-build/` folder. It contains the neutral `index.html` and never loads the GameDistribution SDK. Do not upload `*-gamedistribution-build/` to CrazyGames.
+
+## Release gate
+
+```powershell
+npm run gate
+```
+
+Machine-checked submission gate. Exit code 0 is the only authorisation to upload to any
+portal. Items that need a human are recorded in `docs/gate-manual-evidence.json`, copied
+from the template; the gate rejects entries made against a different commit.
+
+```powershell
+npm run presubmit
+```
+
+Runs tests, build audit and the gate in sequence.
+
 ## Validation
 
 ```powershell
@@ -66,4 +102,18 @@ This creates a separate `submission/sproutbound-gamedistribution.zip` package wi
 
 ## GamePix build
 
-GamePix uses the audited offline package `submission/sproutbound-basic-launch.zip`. No GamePix SDK or runtime request is added. The portal metadata and submission gate are documented in [`docs/gamepix-submission.md`](docs/gamepix-submission.md); the portal still requires an original human-authored description before the game record can be created.
+Generate the isolated offline package with:
+
+```powershell
+npm run build:gamepix
+```
+
+This creates a versioned `submission/sproutbound-quality-0.2.0-gamepix-build/` folder and ZIP. No GamePix SDK or runtime request is added. The portal metadata and submission gate are documented in [`docs/gamepix-submission.md`](docs/gamepix-submission.md); the portal still requires an original human-authored description before the game record can be created.
+
+## All platform builds
+
+```powershell
+npm run build:all
+```
+
+This generates CrazyGames, GamePix and GameDistribution artifacts from the same source tree. It never uploads automatically. The architecture and upload rules are documented in [`docs/platform-builds.md`](docs/platform-builds.md).

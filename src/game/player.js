@@ -1,6 +1,7 @@
 export const PLAYER_GRAVITY = 950;
 export const PLAYER_BOUNCE = -420;
 export const PLAYER_MAX_SPEED = 150;
+export const PLAYER_ACCELERATION = 720;
 
 export function createPlayer({ x, y }) {
   return {
@@ -25,7 +26,7 @@ export function rectsOverlap(a, b) {
 export function stepPlayer(player, input = {}, dt, bounds) {
   const safeDt = Math.min(Math.max(dt, 0), 1 / 30);
   const direction = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-  let vx = player.vx + direction * 720 * safeDt;
+  let vx = player.vx + direction * PLAYER_ACCELERATION * safeDt;
 
   if (direction === 0) {
     vx *= Math.pow(0.001, safeDt);

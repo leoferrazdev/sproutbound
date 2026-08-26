@@ -1,5 +1,14 @@
 # Sproutbound 0.2.0-quality
 
+> [!DANGER] RELEASE RECUSADO — 2026-08-26
+> Este release foi submetido a CrazyGames e recusado, com a mesma frase da primeira vez.
+> O gate abaixo foi marcado com quatro itens ainda em aberto, incluindo a verificacao em
+> Chrome/Edge que dependia de uma pessoa abrir o jogo. Esse foi o erro de processo.
+>
+> O gate passou a ser executavel em `tools/check-gate.mjs`. Esta pagina fica como registro
+> historico; nao usar como criterio de submissao.
+
+
 ## Release decision
 
 This release is a gameplay-quality candidate for another platform review. It must not be submitted as a “visual refresh”. The acceptance bar is a clearer first minute, a more legible reason to collect solar drops, a fairer difficulty curve, and enough visible progression to motivate another run.

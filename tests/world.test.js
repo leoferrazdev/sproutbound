@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createWorld, getRouteSegment } from '../src/game/world.js';
+import { createWorld, getRouteSegment, getSegmentMaxGap, getCarriedReach } from '../src/game/world.js';
 
 const viewport = { width: 360, height: 640 };
 
@@ -13,7 +13,11 @@ test('route segments make the difficulty promise explicit', () => {
   assert.equal(getRouteSegment(30).id, 'risk');
   assert.equal(getRouteSegment(90).id, 'variation');
   assert.equal(getRouteSegment(180).id, 'summit');
-  assert.ok(getRouteSegment(0).maxGap <= getRouteSegment(30).maxGap);
+  // a folga cresce por segmento e nunca ultrapassa o alcance físico real
+  assert.ok(getSegmentMaxGap(getRouteSegment(0)) < getSegmentMaxGap(getRouteSegment(30)));
+  assert.ok(getSegmentMaxGap(getRouteSegment(30)) < getSegmentMaxGap(getRouteSegment(90)));
+  assert.ok(getSegmentMaxGap(getRouteSegment(90)) < getSegmentMaxGap(getRouteSegment(180)));
+  assert.ok(getSegmentMaxGap(getRouteSegment(180)) <= getCarriedReach());
 });
 
 test('initial world keeps early platforms readable and hazard-free', () => {

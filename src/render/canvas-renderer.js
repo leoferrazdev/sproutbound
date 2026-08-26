@@ -1,3 +1,5 @@
+import { PULSE_SECONDS, pulseProgress } from '../game/feedback.js';
+
 const LOGICAL_WIDTH = 360;
 const LOGICAL_HEIGHT = 640;
 const CRACKED_LEAF_COLLAPSE_SECONDS = 0.45;
@@ -169,6 +171,119 @@ function drawBackground(ctx, cameraY) {
   ctx.fill();
 }
 
+
+// Feedback visual. Toda partícula é função pura de (progresso do pulso, índice):
+// nenhum estado mutável, nenhum Math.random no caminho de render.
+const SPARK_COUNT = 9;
+const DUST_COUNT = 7;
+const MOTE_COUNT = 12;
+
+function drawCollectBurst(ctx, feedback, cameraY) {
+  const progress = pulseProgress(feedback, 'collect');
+  const origin = feedback?.origins?.collect;
+  if (progress === null || !origin) return;
+
+  const fade = 1 - progress;
+  const y = origin.y - cameraY;
+  ctx.save();
+  ctx.globalAlpha = fade;
+  ctx.strokeStyle = '#ffd166';
+  ctx.lineWidth = 2;
+  for (let index = 0; index < SPARK_COUNT; index += 1) {
+    const angle = (index / SPARK_COUNT) * Math.PI * 2 + index * 0.21;
+    const inner = 6 + progress * 16;
+    const outer = inner + 5 * fade + 3;
+    ctx.beginPath();
+    ctx.moveTo(origin.x + Math.cos(angle) * inner, y + Math.sin(angle) * inner);
+    ctx.lineTo(origin.x + Math.cos(angle) * outer, y + Math.sin(angle) * outer);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.arc(origin.x, y, 5 + progress * 22, 0, Math.PI * 2);
+  ctx.strokeStyle = '#fff3b0';
+  ctx.globalAlpha = fade * 0.7;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawImpactDust(ctx, feedback, cameraY) {
+  const progress = pulseProgress(feedback, 'impact');
+  const origin = feedback?.origins?.impact;
+  if (progress === null || !origin) return;
+
+  const fade = 1 - progress;
+  const y = origin.y - cameraY;
+  ctx.save();
+  ctx.globalAlpha = fade * 0.75;
+  ctx.fillStyle = '#d5ff9c';
+  for (let index = 0; index < DUST_COUNT; index += 1) {
+    const side = index % 2 === 0 ? -1 : 1;
+    const spread = (Math.floor(index / 2) + 1) / (DUST_COUNT / 2 + 1);
+    const x = origin.x + side * spread * (10 + progress * 20);
+    const lift = progress * 9 * (1 - spread * 0.4);
+    ctx.beginPath();
+    ctx.arc(x, y - lift, 2.4 * fade + 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawMilestoneGlow(ctx, feedback, cameraY) {
+  const progress = pulseProgress(feedback, 'milestone');
+  const origin = feedback?.origins?.milestone;
+  if (progress === null || !origin) return;
+
+  const fade = 1 - progress;
+  const y = origin.y - cameraY;
+  ctx.save();
+  ctx.globalAlpha = fade * 0.34;
+  ctx.fillStyle = '#ffd166';
+  ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+  ctx.globalAlpha = fade * 0.85;
+  ctx.strokeStyle = '#fff3b0';
+  ctx.lineWidth = 3 * fade + 1;
+  ctx.beginPath();
+  ctx.arc(origin.x, y, 14 + progress * 92, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = '#b9f46b';
+  for (let index = 0; index < MOTE_COUNT; index += 1) {
+    const angle = (index / MOTE_COUNT) * Math.PI * 2 + 0.37;
+    const distance = 18 + progress * 70;
+    const rise = progress * 46;
+    ctx.globalAlpha = fade * 0.9;
+    ctx.beginPath();
+    ctx.arc(origin.x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.6 - rise, 2.6 * fade + 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawDeathFade(ctx, feedback) {
+  const progress = pulseProgress(feedback, 'death');
+  if (progress === null) return;
+
+  ctx.save();
+  ctx.globalAlpha = Math.min(0.62, progress * 0.7);
+  ctx.fillStyle = '#09162b';
+  ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+  ctx.globalAlpha = (1 - progress) * 0.5;
+  ctx.strokeStyle = '#627080';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2, 60 + progress * 240, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Tremor de câmera derivado do pulso de impacto. Amplitude pequena e decrescente:
+// comunica contato sem atrapalhar a leitura da próxima folha.
+export function impactShake(feedback) {
+  const progress = pulseProgress(feedback, 'impact');
+  if (progress === null) return { x: 0, y: 0 };
+  const fade = 1 - progress;
+  return { x: 0, y: Math.sin(progress * Math.PI * 3) * 2.6 * fade };
+}
+
 export function createCanvasRenderer(canvas) {
   const context = canvas.getContext?.('2d') ?? null;
   let transform = { scale: 1, offsetX: 0, offsetY: 0, dpr: 1 };
@@ -193,17 +308,25 @@ export function createCanvasRenderer(canvas) {
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.setTransform(scale * dpr, 0, 0, scale * dpr, offsetX * dpr, offsetY * dpr);
-    drawBackground(context, snapshot.cameraY ?? 0);
+    const feedback = snapshot.feedback ?? {};
+    const shake = impactShake(feedback);
+    const cameraY = (snapshot.cameraY ?? 0) - shake.y;
 
-    for (const platform of snapshot.platforms ?? []) drawLeaf(context, platform, snapshot.cameraY ?? 0);
-    for (const sun of snapshot.sunDrops ?? []) drawSun(context, sun, snapshot.cameraY ?? 0);
+    drawBackground(context, cameraY);
+
+    for (const platform of snapshot.platforms ?? []) drawLeaf(context, platform, cameraY);
+    for (const sun of snapshot.sunDrops ?? []) drawSun(context, sun, cameraY);
+    drawImpactDust(context, feedback, cameraY);
     if (snapshot.player) drawPip(
       context,
       snapshot.player,
-      snapshot.cameraY ?? 0,
+      cameraY,
       snapshot.visualTier,
-      snapshot.feedback,
+      feedback,
     );
+    drawCollectBurst(context, feedback, cameraY);
+    drawMilestoneGlow(context, feedback, cameraY);
+    drawDeathFade(context, feedback);
 
     context.fillStyle = 'rgba(255, 255, 255, 0.06)';
     context.fillRect(12, 12, LOGICAL_WIDTH - 24, 2);

@@ -6,6 +6,11 @@
   "scripts": {
     "test": "node --test",
     "check:build": "node tools/check-build.mjs",
-    "build:gamedistribution": "node tools/build-gamedistribution.mjs"
+    "build:crazygames": "node tools/build-crazygames.mjs",
+    "build:gamepix": "node tools/build-gamepix.mjs",
+    "build:gamedistribution": "node tools/build-gamedistribution.mjs",
+    "build:all": "node tools/build-all.mjs",
+    "gate": "node tools/check-gate.mjs",
+    "presubmit": "npm test && npm run check:build && npm run gate"
   }
 }
