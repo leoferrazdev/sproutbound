@@ -14,11 +14,17 @@ PNG exports are ready for upload:
 - `sproutbound-portrait.png`: 800×1200
 - `sproutbound-square.png`: 800×800
 
-Preview videos are recorded with `tools/record-preview.html`; the procedure and the
-platform requirements are in [`docs/preview-videos.md`](../docs/preview-videos.md).
+Preview videos live in `videos/` and are recorded with `tools/record-preview.html`; the
+procedure and the platform requirements are in [`docs/preview-videos.md`](../docs/preview-videos.md).
 
-The old `*-preview-quality.mp4` files are **not** submittable: 1280x720 and 800x1200 at 10
-seconds, against a requirement of 1080p and 15 to 20 seconds. The files without the suffix
-were generated from the covers and are not gameplay at all. Delete both sets once the real
-takes are recorded; `npm run gate` fails while any unexpected preview file remains in the
-folder.
+Current takes, recorded 2026-08-26 and verified against the specification:
+
+| File | Resolution | Duration | Audio | Size |
+| --- | --- | --- | --- | --- |
+| `videos/sproutbound-landscape-preview.mp4` | 1920x1080 | 16.85 s | none | 14.4 MB |
+| `videos/sproutbound-portrait-preview.mp4` | 1080x1620 | 16.87 s | none | 15.8 MB |
+
+The earlier drafts were deleted: two were generated from the covers and were not gameplay
+at all, and two were 1280x720 and 800x1200 at 10 seconds, against a requirement of 1080p
+and 15 to 20 seconds. `npm run gate` fails while any unexpected preview file sits in the
+folder, so a stale take cannot be uploaded by accident.

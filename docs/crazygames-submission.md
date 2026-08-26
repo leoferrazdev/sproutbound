@@ -32,7 +32,7 @@ Bloqueado ate `npm run gate` sair com codigo 0.
 - [ ] Confirm Chrome and Edge playability, first-input onboarding, restart flow, and mobile layout.
 - [ ] Fill English metadata and controls in the Developer Portal.
 - [ ] Upload landscape, portrait, and square covers from `media/covers/`.
-- [ ] Replace preview-video drafts with actual silent gameplay recordings.
+- [x] Replace preview-video drafts with actual silent gameplay recordings.
 - [ ] Submit only after the Preview Tool reports no blocking issue.
 
 The complete build matrix is documented in [`docs/platform-builds.md`](platform-builds.md). Use `npm run build:crazygames` for the CrazyGames artifact; `npm run build:all` is for generating all artifacts locally and does not submit them.

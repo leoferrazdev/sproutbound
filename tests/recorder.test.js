@@ -100,3 +100,70 @@ test('a conferência reprova tomada abaixo de 30 quadros por segundo', async () 
   assert.match(fonte, /fpsReal < 30/);
   assert.match(fonte, /\['Quadros por segundo', `\$\{fpsReal\}`, fpsReal >= 30\]/);
 });
+
+test('as dimensões do MP4 são lidas do fim da tkhd, não por offset calculado', async () => {
+  const { runGate } = await import('../tools/check-gate.mjs');
+  const resultado = runGate().find((r) => r.id === 'P0-4');
+  assert.ok(resultado, 'o item de vídeos precisa existir no gate');
+  // O offset a partir do início erra por causa dos campos de tamanho variável
+  // entre tkhd versão 0 e 1: o gate lia a altura como largura e reprovava
+  // arquivo correto pelo motivo errado.
+  assert.ok(
+    !/1080x0|x0,|: 1080px/.test(resultado.detail),
+    `o parser voltou a ler a dimensão errada: ${resultado.detail}`,
+  );
+});
+
+test('os dois vídeos entregues cumprem a especificação da plataforma', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const raiz = new URL('../media/videos/', import.meta.url);
+  const esperado = {
+    'sproutbound-landscape-preview.mp4': { w: 1920, h: 1080 },
+    'sproutbound-portrait-preview.mp4': { w: 1080, h: 1620 },
+  };
+
+  const lerMp4 = (buffer) => {
+    const info = { seconds: null, width: null, height: null, hasAudio: buffer.includes(Buffer.from('mp4a')) };
+    let soma = 0;
+    const walk = (start, end, nivel) => {
+      let p = start;
+      while (p + 8 <= end) {
+        let size = buffer.readUInt32BE(p);
+        const type = buffer.toString('latin1', p + 4, p + 8);
+        if (size === 1) size = Number(buffer.readBigUInt64BE(p + 8));
+        if (size < 8 || p + size > end) break;
+        if (nivel === 0) soma += size;
+        if (type === 'mvhd') {
+          const v = buffer[p + 8];
+          const escala = v === 1 ? buffer.readUInt32BE(p + 28) : buffer.readUInt32BE(p + 20);
+          const dur = v === 1 ? Number(buffer.readBigUInt64BE(p + 32)) : buffer.readUInt32BE(p + 24);
+          if (escala) info.seconds = dur / escala;
+        }
+        if (type === 'tkhd') {
+          const w = buffer.readUInt32BE(p + size - 8) / 65536;
+          const h = buffer.readUInt32BE(p + size - 4) / 65536;
+          if (w > 0 && h > 0) { info.width = Math.round(w); info.height = Math.round(h); }
+        }
+        if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(type)) walk(p + 8, p + size, nivel + 1);
+        p += size;
+      }
+    };
+    walk(0, buffer.length, 0);
+    info.completo = soma === buffer.length;
+    return info;
+  };
+
+  for (const [nome, alvo] of Object.entries(esperado)) {
+    const arquivo = path.default.join(raiz.pathname.replace(/^\//, ''), nome);
+    const buffer = fs.default.readFileSync(decodeURIComponent(arquivo));
+    const info = lerMp4(buffer);
+    assert.equal(info.width, alvo.w, `${nome}: largura`);
+    assert.equal(info.height, alvo.h, `${nome}: altura`);
+    assert.ok(info.seconds >= 15 && info.seconds <= 20, `${nome}: ${info.seconds?.toFixed(2)}s fora de 15 a 20`);
+    assert.equal(info.hasAudio, false, `${nome}: contém faixa de áudio`);
+    assert.ok(buffer.length <= 50 * 1024 * 1024, `${nome}: acima de 50 MB`);
+    // a soma das caixas de topo tem de fechar com o arquivo, senão está truncado
+    assert.ok(info.completo, `${nome}: arquivo truncado ou incompleto`);
+  }
+});

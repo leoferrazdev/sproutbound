@@ -155,7 +155,7 @@ function pngSize(buffer) {
 }
 
 function mp4Info(buffer) {
-  const info = { seconds: null, width: null, hasAudio: buffer.includes(Buffer.from('mp4a')) };
+  const info = { seconds: null, width: null, height: null, hasAudio: buffer.includes(Buffer.from('mp4a')) };
   const walk = (start, end) => {
     let p = start;
     while (p + 8 <= end) {
@@ -170,10 +170,16 @@ function mp4Info(buffer) {
         if (scale) info.seconds = Number((duration / scale).toFixed(2));
       }
       if (type === 'tkhd') {
-        const version = buffer[p + 8];
-        const offset = version === 1 ? p + 8 + 92 : p + 8 + 80;
-        const width = buffer.readUInt32BE(offset) / 65536;
-        if (width > 0) info.width = Math.round(width);
+        // Largura e altura são os últimos 8 bytes da box, em ponto fixo 16.16.
+        // Calcular o offset a partir do início erra por causa dos campos de
+        // tamanho variável entre versão 0 e 1, e o gate lia a altura como se
+        // fosse a largura — reprovava arquivo correto pelo motivo errado.
+        const width = buffer.readUInt32BE(p + size - 8) / 65536;
+        const height = buffer.readUInt32BE(p + size - 4) / 65536;
+        if (width > 0 && height > 0) {
+          info.width = Math.round(width);
+          info.height = Math.round(height);
+        }
       }
       if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(type)) walk(p + 8, p + size);
       p += size;
@@ -531,8 +537,8 @@ check('MEDIA-1', 'Capas nos três formatos exigidos', () => {
 
 check('P0-4', 'Vídeos de preview dentro da especificação', () => {
   const wanted = [
-    { id: 'landscape', minWidth: THRESHOLDS.video.minLandscapeWidth },
-    { id: 'portrait', minWidth: THRESHOLDS.video.minPortraitWidth },
+    { id: 'landscape', minWidth: 1920, minHeight: 1080 },
+    { id: 'portrait', minWidth: 1080, minHeight: 1620 },
   ];
   const problems = [];
 
@@ -558,8 +564,8 @@ check('P0-4', 'Vídeos de preview dentro da especificação', () => {
     if (info.seconds === null || info.seconds < THRESHOLDS.video.minSeconds || info.seconds > THRESHOLDS.video.maxSeconds) {
       problems.push(`${name}: ${info.seconds}s, exigido ${THRESHOLDS.video.minSeconds}-${THRESHOLDS.video.maxSeconds}s`);
     }
-    if (info.width === null || info.width < item.minWidth) {
-      problems.push(`${name}: ${info.width}px de largura, exigido ${item.minWidth}px`);
+    if (info.width === null || info.width < item.minWidth || info.height < item.minHeight) {
+      problems.push(`${name}: ${info.width}x${info.height}, exigido ${item.minWidth}x${item.minHeight}`);
     }
     if (info.hasAudio) problems.push(`${name}: contém faixa de áudio, o portal exige sem som`);
     if (buffer.length > THRESHOLDS.video.maxBytes) problems.push(`${name}: acima de 50 MB`);
