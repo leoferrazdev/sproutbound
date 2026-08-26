@@ -167,3 +167,22 @@ test('os dois vídeos entregues cumprem a especificação da plataforma', async 
     assert.ok(info.completo, `${nome}: arquivo truncado ou incompleto`);
   }
 });
+
+test('o arquivo editorial fica fora do alcance do gate', async () => {
+  const fs = await import('node:fs');
+  const gate = await readFile(new URL('../tools/check-gate.mjs', import.meta.url), 'utf8');
+  // O gate varre media/videos e reprova arquivo inesperado ali. O material
+  // editorial precisa viver fora dessa pasta para não bloquear a submissão nem
+  // ser enviado por engano.
+  assert.match(gate, /path\.join\(ROOT, 'media', 'videos'\)/);
+  assert.ok(!/readdirSync[^)]*recursive/.test(gate), 'a varredura não pode ser recursiva');
+
+  const arquivo = new URL('../media/archive/', import.meta.url);
+  assert.ok(fs.default.existsSync(arquivo), 'a pasta de arquivo precisa existir');
+  const videos = fs.default.readdirSync(new URL('../media/videos/', import.meta.url));
+  assert.deepEqual(
+    videos.filter((n) => n.endsWith('.mp4')).sort(),
+    ['sproutbound-landscape-preview.mp4', 'sproutbound-portrait-preview.mp4'],
+    'media/videos só pode conter as duas tomadas de submissão',
+  );
+});
