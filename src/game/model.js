@@ -1,5 +1,6 @@
 import { createWorld } from './world.js';
-import { createDefaultProgress, getMilestone, getVisualTier } from './progression.js';
+import { createDefaultProgress, getMilestone, getVisualTier, countRoutesCleared, PROGRESS_VERSION } from './progression.js';
+import { getFirstRoute, getRouteRows, createObjectiveTracker } from './campaign.js';
 
 export function createPlatform({ x, y, width, kind = 'leaf' }) {
   return {
@@ -11,8 +12,18 @@ export function createPlatform({ x, y, width, kind = 'leaf' }) {
   };
 }
 
-export function createRun(seed = 1, progress = createDefaultProgress()) {
-  const entities = createWorld(seed, { width: 360, height: 640, platformCount: 36 });
+// A rota carrega a própria semente: repetir uma fase produz a mesma fase.
+export function createRun(seedOrRoute = null, progress = createDefaultProgress()) {
+  const route = seedOrRoute && typeof seedOrRoute === 'object' && seedOrRoute.id
+    ? seedOrRoute
+    : { ...getFirstRoute(), seed: Number.isFinite(seedOrRoute) ? seedOrRoute : getFirstRoute().seed };
+  const entities = createWorld(route.seed, {
+    width: 360,
+    height: 640,
+    platformCount: getRouteRows(route),
+    reachScale: route.reachScale,
+    hazards: route.hazards,
+  });
   const platforms = entities
     .filter((entity) => entity.type === 'platform')
     .map(({ type, ...platform }) => platform);
@@ -22,10 +33,12 @@ export function createRun(seed = 1, progress = createDefaultProgress()) {
   const startY = firstPlatform.y - 34;
   const lastPlatform = platforms.at(-1);
   const summitHeight = Math.floor((startY - lastPlatform.y) / 12) + 1;
-  const safeProgress = progress?.version === 1 ? progress : createDefaultProgress();
+  const safeProgress = progress?.version === PROGRESS_VERSION ? progress : createDefaultProgress();
 
   return {
     state: 'ready',
+    route: { id: route.id, order: route.order, biome: route.biome, objective: route.objective, height: route.height },
+    objective: createObjectiveTracker(route),
     score: 0,
     bestScore: Math.max(0, safeProgress.bestHeight ?? 0),
     startY,
@@ -53,6 +66,6 @@ export function createRun(seed = 1, progress = createDefaultProgress()) {
     thorns,
     sunDrops,
     cameraY: 0,
-    nextUnlock: getMilestone(safeProgress.bestHeight ?? 0),
+    nextUnlock: getMilestone(countRoutesCleared(safeProgress)),
   };
 }

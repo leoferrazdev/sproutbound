@@ -1,5 +1,4 @@
 import { PLAYER_BOUNCE, rectsOverlap, stepPlayer } from './player.js';
-import { getMilestone } from './progression.js';
 
 const WORLD_BOUNDS = { width: 360, height: 640 };
 export const HEIGHT_PIXELS_PER_METER = 12;
@@ -103,7 +102,7 @@ export function stepRun(run, input = {}, dt) {
     shieldAvailable: Boolean(run.solar?.shieldAvailable),
     shieldUsed: Boolean(run.solar?.shieldUsed),
   };
-  let nextUnlock = run.nextUnlock ?? getMilestone(score);
+  const nextUnlock = run.nextUnlock ?? null;
   const events = [...platformState.events];
   if (started) events.push('gameplayStarted');
   const hazardPlatform = platforms.find((platform) => (
@@ -177,11 +176,6 @@ export function stepRun(run, input = {}, dt) {
     const collected = new Set(collectedSunDrops);
     sunDrops = sunDrops.filter((sun) => !collected.has(sun));
     events.push('collectedSun');
-  }
-
-  if (nextUnlock && score >= nextUnlock.height) {
-    events.push('milestoneReached');
-    nextUnlock = getMilestone(score);
   }
 
   const reachedSummit = !run.summitReached

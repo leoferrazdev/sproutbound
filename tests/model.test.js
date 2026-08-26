@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPlatform, createRun } from '../src/game/model.js';
-import { applyProgression, createDefaultProgress } from '../src/game/progression.js';
+import { applyRouteResult, createDefaultProgress } from '../src/game/progression.js';
+import { getRoute } from '../src/game/campaign.js';
 
 test('new run starts ready with a player and safe starting platform', () => {
   const run = createRun();
@@ -15,16 +16,20 @@ test('new run starts ready with a player and safe starting platform', () => {
   assert.equal(run.sunDrops.length >= 0, true);
   assert.equal(run.nextUnlock.id, 'bud');
   assert.equal(run.sunCount, 0);
-  assert.equal(run.platforms.length >= 24, true);
+  assert.equal(run.route.id, 'canopy-1', 'sem argumento o run começa na primeira rota da campanha');
+  assert.equal(run.objective.type, 'reach');
   const lastPlatform = run.platforms.at(-1);
   const expectedSummitHeight = Math.floor((run.startY - lastPlatform.y) / 12) + 1;
   assert.equal(run.summitHeight, expectedSummitHeight);
-  assert.equal(run.summitHeight, 249);
+  assert.ok(run.summitHeight >= getRoute(1).height, 'o cume precisa cobrir a altura declarada da rota');
 });
 
 test('new run carries persistent visual progression and solar state', () => {
-  const reachedBloom = applyProgression(createDefaultProgress(), { type: 'height', height: 25 });
-  const run = createRun(1, reachedBloom.progress);
+  let progress = createDefaultProgress();
+  for (const order of [1, 2, 3, 4, 5]) {
+    progress = applyRouteResult(progress, { routeId: getRoute(order).id, cleared: true, seconds: 20, drops: 4 }).progress;
+  }
+  const run = createRun(getRoute(6), progress);
 
   assert.equal(run.visualTier.id, 'bloom');
   assert.deepEqual(run.solar, {

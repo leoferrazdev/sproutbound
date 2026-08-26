@@ -1,16 +1,36 @@
-import { createDefaultProgress, getMilestones } from './game/progression.js';
+import { createDefaultProgress, getMilestones, migrateProgress, PROGRESS_VERSION } from './game/progression.js';
+import { getRoutes } from './game/campaign.js';
 
-const STORAGE_KEY = 'sproutbound.progress.v1';
+const STORAGE_KEY = 'sproutbound.progress.v2';
+const LEGACY_KEY = 'sproutbound.progress.v1';
 const VALID_IDS = new Set(getMilestones().map((milestone) => milestone.id));
+const VALID_ROUTES = new Set(getRoutes().map((route) => route.id));
 
 function validate(value) {
-  if (!value || value.version !== 1 || !Array.isArray(value.unlocked)) {
+  const migrated = value && value.version !== PROGRESS_VERSION ? migrateProgress(value) : value;
+  if (!migrated || migrated.version !== PROGRESS_VERSION || !Array.isArray(migrated.unlocked)) {
     return createDefaultProgress();
   }
 
-  const unlocked = [...new Set(value.unlocked.filter((id) => VALID_IDS.has(id)))];
-  const bestHeight = Number.isFinite(value.bestHeight) ? Math.max(0, value.bestHeight) : 0;
-  return { version: 1, bestHeight, unlocked };
+  const unlocked = [...new Set(migrated.unlocked.filter((id) => VALID_IDS.has(id)))];
+  const bestHeight = Number.isFinite(migrated.bestHeight) ? Math.max(0, migrated.bestHeight) : 0;
+
+  const routes = {};
+  for (const [id, entry] of Object.entries(migrated.routes ?? {})) {
+    if (!VALID_ROUTES.has(id) || !entry) continue;
+    routes[id] = {
+      cleared: Boolean(entry.cleared),
+      objectiveMet: Boolean(entry.objectiveMet),
+      bestSeconds: Number.isFinite(entry.bestSeconds) && entry.bestSeconds > 0 ? entry.bestSeconds : null,
+      bestDrops: Number.isFinite(entry.bestDrops) ? Math.max(0, Math.trunc(entry.bestDrops)) : 0,
+    };
+  }
+
+  const currentRoute = VALID_ROUTES.has(migrated.currentRoute)
+    ? migrated.currentRoute
+    : createDefaultProgress().currentRoute;
+
+  return { version: PROGRESS_VERSION, bestHeight, unlocked, routes, currentRoute };
 }
 
 export function createSafeStorage(storageLike) {
@@ -18,7 +38,11 @@ export function createSafeStorage(storageLike) {
     load() {
       try {
         if (!storageLike || typeof storageLike.getItem !== 'function') return createDefaultProgress();
-        return validate(JSON.parse(storageLike.getItem(STORAGE_KEY) ?? 'null'));
+        const raw = storageLike.getItem(STORAGE_KEY);
+        if (raw) return validate(JSON.parse(raw));
+        // Jogador que já tinha progresso na versão anterior não recomeça do zero.
+        const legacy = storageLike.getItem(LEGACY_KEY);
+        return validate(legacy ? JSON.parse(legacy) : null);
       } catch {
         return createDefaultProgress();
       }

@@ -136,14 +136,14 @@ test('rect overlap treats touching edges as non-overlap', () => {
   assert.equal(rectsOverlap({ x: 0, y: 0, width: 10, height: 10 }, { x: 10, y: 0, width: 10, height: 10 }), false);
 });
 
-test('landing emits a milestone event and advances the next unlock', () => {
+test('a altura dentro da partida não concede mais marco cosmético', () => {
   const run = {
     state: 'playing',
     score: 9,
     bestScore: 9,
     startY: 206,
     cameraY: 0,
-    nextUnlock: { id: 'bud', height: 10, label: 'Broto com duas folhas' },
+    nextUnlock: { id: 'bud', routesCleared: 1, label: 'Two-leaf sprout' },
     player: { ...createPlayer({ x: 80, y: 80 }), grounded: false, vy: 220 },
     platforms: [{ x: 60, y: 120, width: 100, height: 18, kind: 'leaf' }],
     thorns: [],
@@ -152,9 +152,12 @@ test('landing emits a milestone event and advances the next unlock', () => {
 
   const result = stepRun(run, {}, 0.2);
 
-  assert.ok(result.events.includes('milestoneReached'));
+  // Os marcos passaram a ser concedidos por rota concluída, na camada de campanha.
+  // Antes três dos quatro disparavam nos primeiros 4,6 segundos de jogo.
   assert.equal(result.run.score, 10);
-  assert.equal(result.run.nextUnlock.id, 'bloom');
+  assert.ok(!result.events.includes('milestoneReached'), 'a simulação não distribui mais marco por metro');
+  assert.equal(result.run.nextUnlock.id, 'bud', 'o próximo marco só muda quando uma rota é concluída');
+  assert.ok(result.events.includes('landed'));
 });
 
 test('sun drops are collected once when Pip overlaps them', () => {

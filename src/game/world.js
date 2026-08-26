@@ -42,8 +42,9 @@ export function getCarriedReach() {
   return time * PLAYER_MAX_SPEED;
 }
 
-export function getSegmentMaxGap(segment) {
-  return Math.round(getCarriedReach() * (segment?.reach ?? 0.35));
+export function getSegmentMaxGap(segment, reachScale = null) {
+  const fraction = Number.isFinite(reachScale) ? reachScale : (segment?.reach ?? 0.35);
+  return Math.round(getCarriedReach() * Math.max(0.1, Math.min(1, fraction)));
 }
 
 // Garantia, não calibração: a linha seguinte da rota é puxada para dentro do
@@ -56,8 +57,9 @@ export function constrainRouteX({
   stageWidth = 360,
   motionRange = 0,
   segment,
+  reachScale = null,
 }) {
-  const budget = Math.max(8, getSegmentMaxGap(segment) - motionRange);
+  const budget = Math.max(8, getSegmentMaxGap(segment, reachScale) - motionRange);
   const candidateCentre = candidateX + width / 2;
   const centre = clamp(candidateCentre, previousCentre - budget, previousCentre + budget);
   return clamp(centre - width / 2, 0, stageWidth - width);
@@ -81,7 +83,12 @@ export function createWorld(seed = 1, {
   width = 360,
   height = 640,
   platformCount,
+  reachScale = null,
+  hazards = null,
 } = {}) {
+  // hazards nulo mantém o comportamento anterior; uma receita de rota liga e
+  // desliga cada tipo de folha especial, que é o que dá identidade a cada fase.
+  const allow = hazards ?? { cracked: true, moving: true, thorn: true };
   const random = createRandom(seed);
   const entities = [];
   const defaultPlatformCount = Math.max(4, Math.ceil(height / 96) + 2);
@@ -102,7 +109,7 @@ export function createWorld(seed = 1, {
     const routeSegment = getRouteSegment(altitudeMeters);
     const drift = index === 0
       ? 0
-      : (random() * 2 - 1) * (index <= 2 ? 24 : getSegmentMaxGap(routeSegment));
+      : (random() * 2 - 1) * (index <= 2 ? 24 : getSegmentMaxGap(routeSegment, reachScale));
     const x = index === 0
       ? previousX
       : constrainRouteX({
@@ -111,6 +118,7 @@ export function createWorld(seed = 1, {
         width: platformWidth,
         stageWidth: width,
         segment: routeSegment,
+        reachScale,
       });
     const platform = {
       ...createPlatform({ x, y, width: platformWidth }),
@@ -126,7 +134,7 @@ export function createWorld(seed = 1, {
         ? 78 + Math.floor(random() * 17)
         : 70 + Math.floor(random() * 21);
 
-      if (hazardRow) {
+      if (hazardRow && allow.thorn) {
         entities.push({ type: 'platform', row: index, ...platform });
         const specialX = x < width / 2
           ? clamp(x + platformWidth + 18, 0, width - specialWidth)
@@ -137,7 +145,7 @@ export function createWorld(seed = 1, {
           ...createPlatform({ x: specialX, y, width: specialWidth, kind: 'thorn-leaf' }),
           segment: routeSegment.id,
         });
-      } else if (index % 2 !== 0) {
+      } else if (index % 2 !== 0 && allow.moving) {
         const motionRange = 24 + Math.floor(random() * 12);
         const movingX = constrainRouteX({
           previousCentre,
@@ -146,6 +154,7 @@ export function createWorld(seed = 1, {
           stageWidth: width,
           motionRange,
           segment: routeSegment,
+          reachScale,
         });
         const special = createPlatform({
           x: movingX,
@@ -165,7 +174,7 @@ export function createWorld(seed = 1, {
         });
         routeX = movingX;
         routeWidth = specialWidth;
-      } else {
+      } else if (allow.cracked) {
         entities.push({ type: 'platform', row: index, ...platform });
         const specialX = x < width / 2
           ? clamp(x + platformWidth + 18, 0, width - specialWidth)
@@ -176,6 +185,8 @@ export function createWorld(seed = 1, {
           ...createPlatform({ x: specialX, y, width: specialWidth, kind: 'cracked-leaf' }),
           segment: routeSegment.id,
         });
+      } else {
+        entities.push({ type: 'platform', row: index, ...platform });
       }
     } else {
       entities.push({ type: 'platform', row: index, ...platform });

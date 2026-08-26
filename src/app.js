@@ -3,7 +3,8 @@ import { createGameLoop } from './game/game-loop.js';
 import { bindInput, createInputState } from './input.js';
 import { stepRun } from './game/simulation.js';
 import { createCanvasRenderer } from './render/canvas-renderer.js';
-import { applyProgression, getVisualTier } from './game/progression.js';
+import { getVisualTier, getCurrentRoute, applyRouteResult, migrateProgress } from './game/progression.js';
+import { createObjectiveTracker, trackObjective, evaluateObjective, getRoute } from './game/campaign.js';
 import { createSafeStorage } from './storage.js';
 import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
@@ -19,22 +20,9 @@ function getBrowserStorage(documentRef) {
   }
 }
 
-// Semente por partida. Determinismo continua disponível para teste injetando
-// seedSource; em produção cada partida gera um mundo diferente, porque mundo
-// idêntico a cada run transforma a terceira partida em memorização.
-export function createSeedSource() {
-  let previous = 0;
-  return () => {
-    let seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-    if (seed === previous || seed === 0) seed = (seed + 0x9e3779b9) >>> 0;
-    previous = seed;
-    return seed;
-  };
-}
-
 export function createApp(
   documentRef,
-  { platformAdapterFactory = createPlatformAdapter, seedSource = createSeedSource() } = {},
+  { platformAdapterFactory = createPlatformAdapter } = {},
 ) {
   const gameRoot = documentRef.querySelector('#game');
   if (!gameRoot) {
@@ -70,8 +58,10 @@ export function createApp(
   const unbindInput = bindInput(canvas, input);
   const renderer = createCanvasRenderer(canvas);
   const safeStorage = createSafeStorage(getBrowserStorage(documentRef));
-  let progress = safeStorage.load();
-  const simulation = { run: createRun(seedSource(), progress), stepRun };
+  let progress = migrateProgress(safeStorage.load());
+  let route = getCurrentRoute(progress);
+  let objective = createObjectiveTracker(route);
+  const simulation = { run: createRun(route, progress), stepRun };
   const audio = createAudio({ windowRef: documentRef.defaultView });
   let loop;
   const platformAdapter = platformAdapterFactory({
@@ -90,7 +80,9 @@ export function createApp(
       input.pointerX = null;
       input.active = false;
       input.pressed = false;
-      simulation.run = createRun(seedSource(), progress);
+      route = getCurrentRoute(progress);
+      objective = createObjectiveTracker(route);
+      simulation.run = createRun(route, progress);
       hud.update(simulation.run);
       hud.showNextObjective(simulation.run.nextUnlock);
       screens.showReady();
@@ -99,26 +91,29 @@ export function createApp(
     },
   });
   const ui = {
-    update(run, events) {
+    update(run, events, dt = 0) {
       audio.playEvents(events);
       hud.update(run);
+      objective = trackObjective(objective, events, dt);
       if (run.nextUnlock) hud.showNextObjective(run.nextUnlock);
       if (events.includes('gameplayStarted')) {
         void platformAdapter.startGameplay();
       }
-      if (events.includes('milestoneReached')) {
-        const result = applyProgression(progress, { type: 'height', height: run.score });
-        progress = result.progress;
-        safeStorage.save(progress);
-        simulation.run = {
-          ...simulation.run,
-          visualTier: getVisualTier(progress),
-          bestScore: Math.max(simulation.run.bestScore ?? 0, progress.bestHeight ?? 0),
-        };
-      }
       if (events.includes('summitReached')) {
         void platformAdapter.stopGameplay();
-        screens.showSummit(run);
+        const verdict = evaluateObjective(objective);
+        const result = applyRouteResult(progress, {
+          routeId: route.id,
+          cleared: verdict.cleared,
+          objectiveMet: verdict.objectiveMet,
+          seconds: objective.seconds,
+          drops: objective.drops,
+          height: run.score,
+        });
+        progress = result.progress;
+        safeStorage.save(progress);
+        simulation.run = { ...simulation.run, visualTier: getVisualTier(progress) };
+        screens.showSummit({ ...run, objectiveMet: verdict.objectiveMet, nextRoute: result.routeUnlocked });
         hud.showObjective(translator.t('objective.summit'));
       } else if (events.includes('playerDied')) {
         void platformAdapter.stopGameplay();

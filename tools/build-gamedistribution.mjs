@@ -1,13 +1,11 @@
-import { execFile as execFileCallback } from 'node:child_process';
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
-
-const execFile = promisify(execFileCallback);
+import { buildPlatform, readProjectVersion } from './build-platform.mjs';
+import {
+  createGameDistributionProfile,
+  gameDistributionSdkUrl,
+} from '../platforms/gamedistribution/config.mjs';
 const gameId = '8ccb967dc0be492c9be5fc5a95f32fd5';
-const sdkUrl = 'https://html5.api.gamedistribution.com/main.min.js';
-
 function platformIndex(baseHtml) {
   const platformScripts = `
     <script>
@@ -19,7 +17,7 @@ function platformIndex(baseHtml) {
         },
       };
     </script>
-    <script src="${sdkUrl}"></script>
+    <script src="${gameDistributionSdkUrl}"></script>
     <script type="module" src="./src/main-gamedistribution.js"></script>`;
   const entrypointPattern = /    <script type="module" src="\.\/src\/main\.js"><\/script>/;
   if (!entrypointPattern.test(baseHtml)) {
@@ -30,34 +28,30 @@ function platformIndex(baseHtml) {
 
 export async function buildGameDistribution({
   projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..'),
-  outputRoot = join(projectRoot, 'submission', 'sproutbound-gamedistribution-build'),
-  zipPath = join(projectRoot, 'submission', 'sproutbound-gamedistribution.zip'),
+  submissionRoot = join(projectRoot, 'submission'),
+  outputRoot,
+  zipPath,
 } = {}) {
   const root = resolve(projectRoot);
-  const output = resolve(outputRoot);
-  const archive = resolve(zipPath);
-  const sourceIndex = await readFile(join(root, 'index.html'), 'utf8');
-
-  await rm(output, { recursive: true, force: true });
-  await rm(archive, { force: true });
-  await mkdir(output, { recursive: true });
-  await cp(join(root, 'styles.css'), join(output, 'styles.css'));
-  await cp(join(root, 'src'), join(output, 'src'), { recursive: true });
-  await writeFile(join(output, 'index.html'), platformIndex(sourceIndex), 'utf8');
-  await mkdir(dirname(archive), { recursive: true });
-  await execFile('tar', [
-    '-a',
-    '-c',
-    '-f',
-    archive,
-    '-C',
-    output,
-    'index.html',
-    'styles.css',
-    'src',
-  ]);
-
-  return { outputRoot: output, zipPath: archive, gameId, sdkUrl };
+  const version = await readProjectVersion(root);
+  const profile = createGameDistributionProfile(version);
+  const legacySubmissionRoot = resolve(root, 'submission');
+  const useLegacyNames = outputRoot === undefined
+    && zipPath === undefined
+    && resolve(submissionRoot) === legacySubmissionRoot;
+  return buildPlatform({
+    projectRoot: root,
+    profile,
+    outputRoot: outputRoot ?? join(
+      submissionRoot,
+      useLegacyNames ? 'sproutbound-gamedistribution-build' : profile.outputDirectory,
+    ),
+    zipPath: zipPath ?? join(
+      submissionRoot,
+      useLegacyNames ? 'sproutbound-gamedistribution.zip' : profile.zipFile,
+    ),
+    transformIndex: platformIndex,
+  }).then((result) => ({ ...result, gameId, sdkUrl: gameDistributionSdkUrl }));
 }
 
 const isMainModule = process.argv[1]

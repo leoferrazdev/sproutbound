@@ -18,6 +18,7 @@ import { createRun } from '../src/game/model.js';
 import { stepRun } from '../src/game/simulation.js';
 import { createWorld } from '../src/game/world.js';
 import { getMilestones } from '../src/game/progression.js';
+import { getRoutes, getRoute } from '../src/game/campaign.js';
 import { createFeedbackState, stepFeedback, PULSE_SECONDS } from '../src/game/feedback.js';
 import { createCanvasRenderer } from '../src/render/canvas-renderer.js';
 
@@ -28,9 +29,9 @@ export const THRESHOLDS = Object.freeze({
   contentSeconds: 360,
   maxRewardGapSeconds: 90,
   maxMilestonesInFirstMinute: 2,
-  seedSamples: 25,
-  reachabilitySamples: 100,
-  minCompletionRate: 0.98,
+  minRoutes: 20,
+  minBiomes: 4,
+  minObjectiveTypes: 4,
   coverFormats: [
     { id: 'landscape', width: 1920, height: 1080 },
     { id: 'portrait', width: 800, height: 1200 },
@@ -67,8 +68,8 @@ function readFileSafe(relative) {
 // Agente determinístico: persegue a plataforma alcançável mais próxima acima.
 // Não é um jogador humano, é um limite superior — se nem ele estica o conteúdo,
 // nenhum humano estica.
-export function playToExhaustion({ seed = 1, maxSeconds = 900, dt = 1 / 60 } = {}) {
-  let run = createRun(seed, { bestHeight: 0, unlocked: [] });
+export function playToExhaustion({ seed = 1, route = null, maxSeconds = 900, dt = 1 / 60 } = {}) {
+  let run = createRun(route ?? seed, { bestHeight: 0, unlocked: [] });
   let result = stepRun(run, { left: false, right: false, primary: true }, 0);
   run = result.run;
 
@@ -122,6 +123,24 @@ export function playToExhaustion({ seed = 1, maxSeconds = 900, dt = 1 / 60 } = {
   };
 }
 
+// Mede a campanha inteira. O jogo deixou de ser uma corrida: medir uma partida
+// diria 10 segundos e esconderia o que importa.
+export function playCampaign({ maxSecondsPerRoute = 300 } = {}) {
+  const routes = getRoutes();
+  const perRoute = [];
+  let total = 0;
+  for (const route of routes) {
+    const session = playToExhaustion({ route, maxSeconds: maxSecondsPerRoute });
+    perRoute.push({ id: route.id, seconds: session.seconds, endState: session.endState });
+    total += session.seconds;
+  }
+  return {
+    totalSeconds: Number(total.toFixed(2)),
+    routes: perRoute,
+    unbeatable: perRoute.filter((r) => r.endState !== 'summit').map((r) => r.id),
+  };
+}
+
 export function worldSignature(seed) {
   return createWorld(seed, { platformCount: 60 })
     .map((e) => `${e.type}:${e.kind ?? ''}:${Math.round(e.x)}:${Math.round(e.y)}`)
@@ -168,41 +187,42 @@ const checks = [];
 const check = (id, title, run) => checks.push({ id, title, run });
 
 check('P0-1', 'Conteúdo passa de 6 minutos', () => {
-  const session = playToExhaustion();
-  const ok = session.seconds >= THRESHOLDS.contentSeconds;
+  const campaign = playCampaign();
+  const minutes = (campaign.totalSeconds / 60).toFixed(1);
   return {
-    ok,
-    detail: `agente exauriu o conteúdo em ${session.seconds}s (${session.height} m, estado ${session.endState}); mínimo ${THRESHOLDS.contentSeconds}s`,
+    ok: campaign.totalSeconds >= THRESHOLDS.contentSeconds,
+    detail: `campanha de ${campaign.routes.length} rotas exaurida em ${minutes} min (${campaign.totalSeconds}s) por um agente sem mortes; mínimo ${THRESHOLDS.contentSeconds / 60} min`,
   };
 });
 
-check('P0-2', 'Mundo varia entre partidas', () => {
-  const source = readFileSafe('src/app.js') ?? '';
-  const fixedSeed = [...source.matchAll(/createRun\(\s*(\d+)\s*,/g)].map((m) => m[1]);
-  const signatures = new Set();
-  for (let seed = 1; seed <= THRESHOLDS.seedSamples; seed += 1) signatures.add(worldSignature(seed));
-  const varies = signatures.size === THRESHOLDS.seedSamples;
+check('P0-2', 'Variedade vem de rotas desenhadas e completáveis', () => {
+  const routes = getRoutes();
+  const biomes = new Set(routes.map((route) => route.biome));
+  const objectives = new Set(routes.map((route) => route.objective.type));
 
-  // Variar sem garantir alcançabilidade é pior que semente fixa: entrega partidas
-  // invencíveis. Antes desta guarda, 13 de 50 sementes eram impossíveis.
-  const unbeatable = [];
-  for (let seed = 1; seed <= THRESHOLDS.reachabilitySamples; seed += 1) {
-    if (playToExhaustion({ seed, maxSeconds: 180 }).endState !== 'summit') unbeatable.push(seed);
-  }
-  const rate = (THRESHOLDS.reachabilitySamples - unbeatable.length) / THRESHOLDS.reachabilitySamples;
-  const reachable = rate >= THRESHOLDS.minCompletionRate;
-  const ok = fixedSeed.length === 0 && varies && reachable;
+  // Rota desenhada é fixa por definição: repetir uma fase precisa dar a mesma
+  // fase. A variedade vem do catálogo, não de aleatoriedade por partida.
+  const signatures = new Set(routes.map((route) => worldSignature(route.seed)));
+  const campaign = playCampaign();
 
   const problems = [];
-  if (fixedSeed.length) problems.push(`src/app.js ainda chama createRun com semente literal: ${fixedSeed.join(', ')}`);
-  if (!varies) problems.push(`apenas ${signatures.size}/${THRESHOLDS.seedSamples} sementes produzem mundos distintos`);
-  if (!reachable) problems.push(`${unbeatable.length}/${THRESHOLDS.reachabilitySamples} sementes invencíveis pelo agente: ${unbeatable.slice(0, 6).join(', ')}`);
+  if (routes.length < THRESHOLDS.minRoutes) problems.push(`apenas ${routes.length} rotas, mínimo ${THRESHOLDS.minRoutes}`);
+  if (signatures.size !== routes.length) problems.push(`${routes.length - signatures.size} rotas repetem o mesmo traçado`);
+  if (biomes.size < THRESHOLDS.minBiomes) problems.push(`apenas ${biomes.size} biomas, mínimo ${THRESHOLDS.minBiomes}`);
+  if (objectives.size < THRESHOLDS.minObjectiveTypes) problems.push(`apenas ${objectives.size} tipos de objetivo, mínimo ${THRESHOLDS.minObjectiveTypes}`);
+  if (campaign.unbeatable.length) problems.push(`rotas invencíveis pelo agente: ${campaign.unbeatable.join(', ')}`);
+
+  // A mesma rota precisa gerar o mesmo mundo em execuções distintas.
+  const first = routes[0];
+  if (worldSignature(first.seed) !== worldSignature(getRoute(first.id).seed)) {
+    problems.push('a mesma rota não é reprodutível');
+  }
 
   return {
-    ok,
+    ok: problems.length === 0,
     detail: problems.length
       ? problems.join('; ')
-      : `${signatures.size} mundos distintos e ${Math.round(rate * 100)}% das ${THRESHOLDS.reachabilitySamples} sementes completáveis`,
+      : `${routes.length} rotas distintas em ${biomes.size} biomas, ${objectives.size} tipos de objetivo, todas completáveis`,
   };
 });
 

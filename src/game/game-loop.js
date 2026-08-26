@@ -37,7 +37,7 @@ export function createGameLoop({ canvas, simulation, renderer, ui, input }) {
       cameraY: advanceCamera(result.run, LOGICAL_HEIGHT),
     };
     renderer?.render(simulation.run);
-    ui?.update(simulation.run, result.events);
+    ui?.update(simulation.run, result.events, elapsed);
     animationFrame = request?.(frame) ?? null;
   };
 

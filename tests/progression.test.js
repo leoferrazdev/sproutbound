@@ -1,61 +1,143 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  applyProgression,
+  applyRouteResult,
   createDefaultProgress,
+  countRoutesCleared,
+  getCurrentRoute,
   getMilestone,
+  getRouteState,
+  getUnlockedRoutes,
   getVisualTier,
+  isRouteUnlocked,
+  migrateProgress,
+  selectRoute,
 } from '../src/game/progression.js';
+import { getRoute, getRoutes } from '../src/game/campaign.js';
 import { createSafeStorage } from '../src/storage.js';
 
-test('first visual milestone is reachable and exposes the next objective', () => {
+const clear = (progress, order, extra = {}) => applyRouteResult(progress, {
+  routeId: getRoute(order).id,
+  cleared: true,
+  objectiveMet: false,
+  seconds: 20,
+  drops: 5,
+  height: getRoute(order).height,
+  ...extra,
+}).progress;
+
+test('os marcos cosméticos passam a acompanhar rotas concluídas, não metros', () => {
   const first = getMilestone(0);
-  const afterFirst = getMilestone(first.height);
-
   assert.equal(first.id, 'bud');
-  assert.ok(first.height <= 25);
-  assert.equal(afterFirst.id, 'bloom');
+  assert.equal(first.routesCleared, 1);
+  assert.equal(getMilestone(1).id, 'bloom');
+  assert.equal(getMilestone(12).id, 'summit-crown');
+  assert.equal(getMilestone(25), null, 'depois da última rota não há próximo marco');
 });
 
-test('summit reward becomes the next objective after the initial visual milestones', () => {
-  const summit = getMilestone(60);
-
-  assert.equal(summit.id, 'summit-crown');
-  assert.equal(summit.label, 'Summit Crown');
+test('nenhum marco dispara antes de concluir uma rota', () => {
+  const progress = createDefaultProgress();
+  assert.deepEqual(progress.unlocked, []);
+  assert.equal(getVisualTier(progress).id, 'seed');
+  const afterFirst = applyRouteResult(progress, { routeId: 'canopy-1', cleared: true, seconds: 12, drops: 4 });
+  assert.deepEqual(afterFirst.unlocked, ['bud']);
 });
 
-test('reaching the summit unlocks the persistent summit reward', () => {
-  const result = applyProgression(createDefaultProgress(), { type: 'height', height: 240 });
-
-  assert.ok(result.unlocked.includes('summit-crown'));
-  assert.ok(result.progress.unlocked.includes('summit-crown'));
+test('concluir uma rota libera a seguinte e apenas ela', () => {
+  const progress = clear(createDefaultProgress(), 1);
+  const unlocked = getUnlockedRoutes(progress).map((route) => route.id);
+  assert.deepEqual(unlocked, ['canopy-1', 'canopy-2']);
+  assert.equal(isRouteUnlocked(progress, getRoute(3)), false);
 });
 
-test('progression unlocks a milestone once and ignores duplicates', () => {
-  const initial = createDefaultProgress();
-  const first = applyProgression(initial, { type: 'height', height: 10 });
-  const repeated = applyProgression(first.progress, { type: 'height', height: 10 });
-
-  assert.deepEqual(first.unlocked, ['bud']);
-  assert.deepEqual(repeated.unlocked, []);
-  assert.deepEqual(repeated.progress.unlocked, ['bud']);
+test('alcançar o topo conclui a rota mesmo sem cumprir o objetivo', () => {
+  const progress = applyRouteResult(createDefaultProgress(), {
+    routeId: 'canopy-2', cleared: true, objectiveMet: false, seconds: 30, drops: 1,
+  }).progress;
+  const state = getRouteState(progress, 'canopy-2');
+  assert.equal(state.cleared, true, 'o objetivo não pode travar a progressão');
+  assert.equal(state.objectiveMet, false);
 });
 
-test('visual tier is deterministic and follows the highest unlocked milestone', () => {
-  const initial = getVisualTier(createDefaultProgress());
-  const reachedBloom = applyProgression(createDefaultProgress(), { type: 'height', height: 25 });
-  const bloom = getVisualTier(reachedBloom.progress);
+test('o melhor tempo e o maior número de gotas são preservados', () => {
+  let progress = clear(createDefaultProgress(), 1, { seconds: 30, drops: 4 });
+  progress = clear(progress, 1, { seconds: 18, drops: 2 });
+  progress = clear(progress, 1, { seconds: 44, drops: 9 });
+  const state = getRouteState(progress, 'canopy-1');
+  assert.equal(state.bestSeconds, 18);
+  assert.equal(state.bestDrops, 9);
+});
 
-  assert.equal(initial.id, 'seed');
-  assert.equal(bloom.id, 'bloom');
-  assert.equal(bloom.accent, '#ff9ac2');
+test('o objetivo cumprido uma vez nunca é perdido', () => {
+  let progress = clear(createDefaultProgress(), 1, { objectiveMet: true });
+  progress = clear(progress, 1, { objectiveMet: false });
+  assert.equal(getRouteState(progress, 'canopy-1').objectiveMet, true);
+});
+
+test('a rota atual avança sozinha ao concluir', () => {
+  const progress = clear(createDefaultProgress(), 1);
+  assert.equal(getCurrentRoute(progress).id, 'canopy-2');
+});
+
+test('selecionar rota respeita o desbloqueio', () => {
+  const progress = clear(createDefaultProgress(), 1);
+  assert.equal(selectRoute(progress, 'canopy-2').currentRoute, 'canopy-2');
+  assert.equal(selectRoute(progress, 'summit-5').currentRoute, 'canopy-2', 'rota bloqueada não pode ser escolhida');
+});
+
+test('concluir a campanha inteira libera o último marco', () => {
+  let progress = createDefaultProgress();
+  for (const route of getRoutes()) progress = clear(progress, route.order);
+  assert.equal(countRoutesCleared(progress), 25);
+  assert.ok(progress.unlocked.includes('summit-crown'));
+  assert.equal(getVisualTier(progress).id, 'summit-crown');
+});
+
+test('o progresso da versão anterior é migrado sem perda', () => {
+  const legacy = { version: 1, bestHeight: 180, unlocked: ['bud', 'bloom'] };
+  const migrated = migrateProgress(legacy);
+  assert.equal(migrated.version, 2);
+  assert.equal(migrated.bestHeight, 180);
+  assert.equal(countRoutesCleared(migrated), 1, 'quem já jogava não recomeça numa tela vazia');
+});
+
+test('a persistência lê o formato antigo salvo em disco', () => {
+  const memory = new Map([['sproutbound.progress.v1', JSON.stringify({ version: 1, bestHeight: 200, unlocked: ['bud'] })]]);
+  const storage = {
+    getItem: (key) => (memory.has(key) ? memory.get(key) : null),
+    setItem: (key, value) => memory.set(key, value),
+    removeItem: (key) => memory.delete(key),
+  };
+  const loaded = createSafeStorage(storage).load();
+  assert.equal(loaded.version, 2);
+  assert.equal(loaded.bestHeight, 200);
+});
+
+test('a persistência descarta rota inexistente e valor corrompido', () => {
+  const payload = {
+    version: 2,
+    bestHeight: -5,
+    unlocked: ['bud', 'inexistente'],
+    routes: { 'canopy-1': { cleared: true, bestSeconds: -3, bestDrops: 2.7 }, 'rota-fantasma': { cleared: true } },
+    currentRoute: 'rota-fantasma',
+  };
+  const memory = new Map([['sproutbound.progress.v2', JSON.stringify(payload)]]);
+  const storage = {
+    getItem: (key) => (memory.has(key) ? memory.get(key) : null),
+    setItem: () => {}, removeItem: () => {},
+  };
+  const loaded = createSafeStorage(storage).load();
+  assert.deepEqual(loaded.unlocked, ['bud']);
+  assert.equal(loaded.bestHeight, 0);
+  assert.equal(loaded.routes['rota-fantasma'], undefined);
+  assert.equal(loaded.routes['canopy-1'].bestSeconds, null);
+  assert.equal(loaded.routes['canopy-1'].bestDrops, 2);
+  assert.equal(loaded.currentRoute, 'canopy-1');
 });
 
 test('malformed persisted data falls back to a valid default', () => {
   const storage = { getItem: () => '{broken', setItem: () => {}, removeItem: () => {} };
-  const safe = createSafeStorage(storage);
-
-  assert.deepEqual(safe.load(), createDefaultProgress());
+  assert.deepEqual(createSafeStorage(storage).load(), createDefaultProgress());
 });
 
 test('storage failures never escape the safe adapter', () => {

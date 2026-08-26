@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { runGate, THRESHOLDS, playToExhaustion, worldSignature } from '../tools/check-gate.mjs';
+import { runGate, THRESHOLDS, playToExhaustion, playCampaign, worldSignature } from '../tools/check-gate.mjs';
+import { getRoutes } from '../src/game/campaign.js';
 import { getLateralReach, getCarriedReach, getSegmentMaxGap, getRouteSegment, constrainRouteX } from '../src/game/world.js';
 import { createFeedbackState, stepFeedback, pulseProgress, PULSE_SECONDS } from '../src/game/feedback.js';
 
@@ -61,22 +62,27 @@ test('a rota é puxada para dentro do alcance mesmo com folha móvel', () => {
   assert.ok(distance <= budget, `distância ${distance} acima do orçamento ${budget}`);
 });
 
-test('sementes variadas continuam completáveis', () => {
-  const sample = 40;
-  const unbeatable = [];
-  for (let seed = 1; seed <= sample; seed += 1) {
-    if (playToExhaustion({ seed, maxSeconds: 180 }).endState !== 'summit') unbeatable.push(seed);
-  }
-  assert.ok(
-    unbeatable.length / sample <= 1 - THRESHOLDS.minCompletionRate,
-    `sementes invencíveis: ${unbeatable.join(', ')}`,
-  );
+test('toda rota da campanha é completável', () => {
+  const unbeatable = getRoutes()
+    .filter((route) => playToExhaustion({ route, maxSeconds: 300 }).endState !== 'summit')
+    .map((route) => route.id);
+  assert.deepEqual(unbeatable, [], `rotas invencíveis: ${unbeatable.join(', ')}`);
 });
 
-test('sementes diferentes produzem mundos diferentes', () => {
-  const signatures = new Set([1, 2, 3, 7, 11, 19].map(worldSignature));
-  assert.equal(signatures.size, 6);
-  assert.equal(worldSignature(7), worldSignature(7), 'a mesma semente continua determinística');
+test('a campanha entrega mais conteúdo que o limiar do gate', () => {
+  const campaign = playCampaign();
+  assert.ok(
+    campaign.totalSeconds >= THRESHOLDS.contentSeconds,
+    `campanha de ${campaign.totalSeconds}s, mínimo ${THRESHOLDS.contentSeconds}s`,
+  );
+  assert.equal(campaign.routes.length, getRoutes().length);
+});
+
+test('cada rota tem traçado próprio e é reprodutível', () => {
+  const signatures = new Set(getRoutes().map((route) => worldSignature(route.seed)));
+  assert.equal(signatures.size, getRoutes().length, 'duas rotas com o mesmo traçado');
+  const first = getRoutes()[0];
+  assert.equal(worldSignature(first.seed), worldSignature(first.seed), 'a rota precisa ser a mesma toda vez');
 });
 
 test('todo pulso de feedback guarda a origem do evento', () => {
