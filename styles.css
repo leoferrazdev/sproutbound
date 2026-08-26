@@ -1,4 +1,19 @@
 :root {
+  /* Tokens do HUD. Todo indicador usa a mesma superfície: era a ausência de
+     fundo no contador solar que o deixava ilegível sobre biomas claros. */
+  --hud-surface: rgb(6 18 32 / 82%);
+  --hud-border: rgb(213 255 156 / 26%);
+  --hud-ink: #f5f7e8;
+  --hud-ink-soft: rgb(232 244 236 / 78%);
+  --hud-accent: #ffd166;
+  --hud-radius: 12px;
+  --hud-gap: 8px;
+  --hud-pad-x: 10px;
+  --hud-pad-y: 7px;
+  --hud-label: 12px;
+  --hud-value: 1.05rem;
+  --hud-control-min: 44px;
+
   color-scheme: light;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #071525;
@@ -58,6 +73,10 @@ canvas {
 }
 
 .stage-shell {
+  /* O HUD se adapta à largura do PALCO, não à da janela: o palco é
+     min(100vw, 75svh), então media query de viewport erraria em telas baixas. */
+  container-type: inline-size;
+  container-name: stage;
   position: relative;
   display: grid;
   /* 3:4 em vez de 9:16: no desktop o palco passa de 405 px para 540 px de largura
@@ -92,56 +111,98 @@ canvas {
 }
 
 .hud {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Linhas em fluxo. Os controles estavam com position:absolute sobre a célula
+     que o grid já dava ao bloco RECORDE — 80% dele ficava coberto. Fora do
+     fluxo, o layout não tinha como saber que eles existiam. */
+  display: flex;
+  flex-direction: column;
   align-content: start;
-  gap: 8px;
-  padding: calc(16px + env(safe-area-inset-top)) 16px 16px;
+  gap: var(--hud-gap);
+  padding: calc(14px + env(safe-area-inset-top)) 14px 14px;
+}
+
+.hud-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hud-gap);
+  align-items: flex-start;
+}
+
+.hud-row-top {
+  justify-content: space-between;
+}
+
+.hud-stats {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: var(--hud-gap);
+}
+
+.hud-row-context,
+.hud-row-foot {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Tratamento único para todo indicador: mesma superfície, mesma borda, mesmo
+   raio. Garante contraste sobre qualquer bioma porque o texto nunca fica
+   diretamente sobre a cena. */
+.hud-chip {
+  border: 1px solid var(--hud-border);
+  border-radius: var(--hud-radius);
+  background: var(--hud-surface);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .hud-stat {
   display: grid;
+  flex: 0 1 auto;
+  min-width: 0;
   gap: 2px;
-  padding: 8px 10px;
-  border: 1px solid rgb(213 255 156 / 22%);
-  border-radius: 12px;
-  background: rgb(7 21 37 / 62%);
-  backdrop-filter: blur(5px);
+  padding: var(--hud-pad-y) var(--hud-pad-x);
 }
 
 .hud-stat span,
 .eyebrow {
-  color: #ffd166;
-  font-size: 0.66rem;
+  color: var(--hud-accent);
+  font-size: var(--hud-label);
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .hud-stat strong {
-  font-size: 1.1rem;
+  color: var(--hud-ink);
+  font-size: var(--hud-value);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .objective {
-  grid-column: 1 / -1;
-  max-width: 270px;
-  margin: 2px auto 0;
-  padding: 8px 12px;
+  max-width: 100%;
+  margin: 0;
+  padding: var(--hud-pad-y) 12px;
   border-radius: 999px;
-  background: rgb(7 21 37 / 70%);
   color: #e7ffb3;
-  font-size: 0.78rem;
-  text-align: center;
+  font-size: var(--hud-label);
 }
 
+/* Era o único indicador sem fundo próprio, e o text-shadow era âmbar sobre texto
+   âmbar: mesma matiz, adiciona brilho e não contraste. Sobre o bioma de cristal
+   virava amarelo em ciano claro. Agora tem a mesma superfície dos demais, e a
+   sombra é escura, para definir a borda da letra em qualquer cena. */
 .sun-counter {
-  grid-column: 1 / -1;
-  margin: -2px auto 0;
-  color: #ffd166;
-  font-size: 0.72rem;
+  margin: 0;
+  padding: var(--hud-pad-y) 12px;
+  border-radius: 999px;
+  color: var(--hud-accent);
+  font-size: var(--hud-label);
   font-weight: 800;
-  text-align: center;
-  text-shadow: 0 1px 12px rgb(255 209 102 / 45%);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgb(3 10 18 / 85%);
 }
 
 .desktop-guide {
@@ -440,19 +501,18 @@ button:focus-visible {
 
 /* Ações do HUD: som, rotas e pausa. */
 .hud-actions {
-  position: absolute;
-  top: 10px;
-  right: 10px;
   display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
   pointer-events: auto;
 }
 
 .hud-actions .hud-button {
-  min-width: 68px;
-  min-height: 44px;
-  padding: 0 10px;
-  font-size: 12px;
+  min-height: var(--hud-control-min);
+  padding: 0 var(--hud-pad-x);
+  font-size: var(--hud-label);
   white-space: nowrap;
 }
 
@@ -462,4 +522,71 @@ button:focus-visible {
 }
 
 #pause-screen { gap: 8px; }
+
+/* O HUD não deve capturar cliques fora dos controles: só as ações são clicáveis. */
+.hud-row,
+.hud-stats { pointer-events: none; }
+.hud-actions { pointer-events: auto; }
 #pause-screen .secondary-button { margin-top: 6px; }
+
+/* Breakpoints do HUD por CONTAINER, não por viewport. O palco é
+   min(100vw, 75svh): numa janela larga e baixa ele fica estreito, e uma media
+   query de viewport concluiria o oposto. Os valores base acima continuam
+   valendo onde container query não existe. */
+@container stage (max-width: 460px) {
+  .hud {
+    --hud-pad-x: 8px;
+    --hud-pad-y: 6px;
+    --hud-value: 0.95rem;
+    --hud-gap: 6px;
+    padding: calc(10px + env(safe-area-inset-top)) 10px 10px;
+  }
+
+  .hud-actions .hud-button {
+    padding: 0 8px;
+  }
+}
+
+@container stage (max-width: 380px) {
+  /* Não cabem stats e três controles na mesma linha: os controles quebram para
+     a linha seguinte, alinhados à direita, em vez de espremer ou sobrepor. */
+  .hud-stats {
+    flex: 1 1 100%;
+  }
+
+  .hud-actions {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
+  .hud-stat strong {
+    font-size: 0.9rem;
+  }
+}
+
+@container stage (max-width: 300px) {
+  .hud {
+    --hud-label: 12px;
+  }
+
+  .hud-stats {
+    flex-wrap: wrap;
+  }
+
+  .hud-stat {
+    flex: 1 1 calc(50% - var(--hud-gap));
+  }
+
+  .hud-actions .hud-button {
+    flex: 1 1 auto;
+    padding: 0 6px;
+  }
+}
+
+/* Altura curta: encolhe o ritmo vertical para o HUD não comer a área de jogo. */
+@container stage (max-height: 520px) {
+  .hud {
+    --hud-gap: 6px;
+    padding: calc(8px + env(safe-area-inset-top)) 10px 8px;
+  }
+}
