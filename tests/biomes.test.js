@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { BIOMES, getBiome, getRoutes } from '../src/game/campaign.js';
 import { createCanvasRenderer } from '../src/render/canvas-renderer.js';
+import { STAGE_WIDTH, STAGE_HEIGHT } from '../src/game/stage.js';
 
 // Sonda que grava cor e geometria. Testar o estado do modelo não prova que a cor
 // chega ao pixel — foi exatamente esse o defeito do feedback calculado e nunca
@@ -92,4 +93,50 @@ test('bioma desconhecido recai para o inicial em vez de quebrar', () => {
   assert.equal(getBiome(undefined).id, 'canopy');
   assert.doesNotThrow(() => paint(scene('inexistente')));
   assert.doesNotThrow(() => paint({ platforms: [], sunDrops: [], thorns: [] }));
+});
+
+test('nenhuma faixa vertical do palco fica sem silhueta de fundo', () => {
+  // Havia um vão de 120 px num palco de 480, um quarto da largura, visível como
+  // coluna escura dentro da área de jogo. A causa era hash que agrupa; a medida
+  // certa é a maior faixa sem nada desenhado.
+  const xs = [];
+  const context = new Proxy({}, {
+    get: (_target, prop) => {
+      if (prop === 'createLinearGradient') return () => ({ addColorStop: () => {} });
+      if (prop === 'canvas') return { width: STAGE_WIDTH, height: STAGE_HEIGHT };
+      if (prop === 'ellipse' || prop === 'arc') return (x) => { if (Number.isFinite(x)) xs.push(x); };
+      if (prop === 'moveTo') return (x) => { if (Number.isFinite(x)) xs.push(x); };
+      if (typeof prop === 'string') return () => undefined;
+      return () => undefined;
+    },
+    set: () => true,
+  });
+  const renderer = createCanvasRenderer({ width: STAGE_WIDTH, height: STAGE_HEIGHT, getContext: () => context });
+  renderer.resize({ width: STAGE_WIDTH, height: STAGE_HEIGHT, dpr: 1 });
+  renderer.render({ route: { biome: 'canopy' }, platforms: [], sunDrops: [], thorns: [], cameraY: -200, feedback: {} });
+
+  const dentro = xs.filter((x) => x >= 0 && x <= STAGE_WIDTH).sort((a, b) => a - b);
+  assert.ok(dentro.length >= 12, `apenas ${dentro.length} silhuetas no palco`);
+
+  let maiorVao = dentro[0];
+  for (let i = 1; i < dentro.length; i += 1) maiorVao = Math.max(maiorVao, dentro[i] - dentro[i - 1]);
+  maiorVao = Math.max(maiorVao, STAGE_WIDTH - dentro.at(-1));
+
+  const limite = STAGE_WIDTH * 0.18;
+  assert.ok(maiorVao <= limite, `faixa de ${Math.round(maiorVao)}px sem silhueta, limite ${Math.round(limite)}px`);
+});
+
+test('cada camada de paralaxe cobre a largura sozinha', () => {
+  // Se uma camada inteira se agrupa num arco, a cobertura depende de sorte das
+  // outras. Cada uma precisa se distribuir.
+  for (let camada = 0; camada < 3; camada += 1) {
+    const contagens = [5, 7, 9];
+    const n = contagens[camada];
+    const posicoes = [];
+    for (let i = 0; i < n; i += 1) posicoes.push((((i + 0.5) / n + camada / 3) % 1) * STAGE_WIDTH);
+    posicoes.sort((a, b) => a - b);
+    let vao = posicoes[0];
+    for (let i = 1; i < posicoes.length; i += 1) vao = Math.max(vao, posicoes[i] - posicoes[i - 1]);
+    assert.ok(vao <= STAGE_WIDTH / n + 1, `camada ${camada} tem vão de ${Math.round(vao)}px`);
+  }
 });

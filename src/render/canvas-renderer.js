@@ -159,12 +159,18 @@ const PARALLAX_LAYERS = [
 const BAND = 320;
 
 // Posições fixas por índice: nada de aleatoriedade no caminho de render.
-function layerOffsetX(layer, index) {
-  return ((index * 97 + layer * 43) % 100) / 100 * LOGICAL_WIDTH;
+//
+// Amostragem estratificada, não hash. A versão anterior usava `index * 97 % 100`,
+// que anda de três em três e agrupa cada camada num arco estreito: sobrava uma
+// faixa de 120 px sem nenhuma silhueta, um quarto da largura do palco, visível
+// como uma coluna mais escura dentro da área de jogo. Dividir o intervalo em
+// fatias iguais e deslocar cada camada garante cobertura.
+function layerOffsetX(layer, index, count) {
+  return (((index + 0.5) / count + layer / 3) % 1) * LOGICAL_WIDTH;
 }
 
-function layerOffsetY(layer, index) {
-  return ((index * 61 + layer * 29) % 100) / 100 * BAND;
+function layerOffsetY(layer, index, count) {
+  return (((index + 0.5) / count + layer * 0.41) % 1) * BAND;
 }
 
 function drawSilhouette(ctx, kind, x, y, size) {
@@ -209,11 +215,11 @@ function drawBackground(ctx, cameraY, palette, width = LOGICAL_WIDTH, height = L
     ctx.fillStyle = palette.silhouette;
     ctx.globalAlpha = config.alpha;
     for (let index = 0; index < config.count; index += 1) {
-      const baseY = layerOffsetY(layer, index) + shift;
+      const baseY = layerOffsetY(layer, index, config.count) + shift;
       const size = (16 + ((index * 37) % 22)) * config.scale * (width / LOGICAL_WIDTH);
       const columns = Math.max(1, Math.ceil(width / LOGICAL_WIDTH));
       for (let column = 0; column < columns; column += 1) {
-        const x = layerOffsetX(layer, index) + column * LOGICAL_WIDTH * (width / LOGICAL_WIDTH) / columns;
+        const x = layerOffsetX(layer, index, config.count) * (width / LOGICAL_WIDTH) / columns + column * width / columns;
         for (let wrap = -BAND; wrap <= height + BAND; wrap += BAND) {
           const y = baseY + wrap;
           if (y < -size * 2 || y > height + size * 2) continue;
