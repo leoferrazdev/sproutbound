@@ -1,5 +1,6 @@
 import { PULSE_SECONDS, pulseProgress } from '../game/feedback.js';
 import { getBiome } from '../game/campaign.js';
+import { playerGhosts } from '../game/player.js';
 
 const LOGICAL_WIDTH = 360;
 const LOGICAL_HEIGHT = 640;
@@ -194,12 +195,12 @@ function drawSilhouette(ctx, kind, x, y, size) {
   ctx.fill();
 }
 
-function drawBackground(ctx, cameraY, palette) {
-  const gradient = ctx.createLinearGradient(0, 0, 0, LOGICAL_HEIGHT);
+function drawBackground(ctx, cameraY, palette, width = LOGICAL_WIDTH, height = LOGICAL_HEIGHT) {
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
   gradient.addColorStop(0, palette.sky[0]);
   gradient.addColorStop(1, palette.sky[1]);
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+  ctx.fillRect(0, 0, width, height);
 
   ctx.save();
   for (let layer = 0; layer < PARALLAX_LAYERS.length; layer += 1) {
@@ -210,11 +211,15 @@ function drawBackground(ctx, cameraY, palette) {
     ctx.globalAlpha = config.alpha;
     for (let index = 0; index < config.count; index += 1) {
       const baseY = layerOffsetY(layer, index) + shift;
-      const size = (16 + ((index * 37) % 22)) * config.scale;
-      for (const wrap of [-BAND, 0, BAND, BAND * 2]) {
-        const y = baseY + wrap;
-        if (y < -size * 2 || y > LOGICAL_HEIGHT + size * 2) continue;
-        drawSilhouette(ctx, palette.silhouetteKind, layerOffsetX(layer, index), y, size);
+      const size = (16 + ((index * 37) % 22)) * config.scale * (width / LOGICAL_WIDTH);
+      const columns = Math.max(1, Math.ceil(width / LOGICAL_WIDTH));
+      for (let column = 0; column < columns; column += 1) {
+        const x = layerOffsetX(layer, index) + column * LOGICAL_WIDTH * (width / LOGICAL_WIDTH) / columns;
+        for (let wrap = -BAND; wrap <= height + BAND; wrap += BAND) {
+          const y = baseY + wrap;
+          if (y < -size * 2 || y > height + size * 2) continue;
+          drawSilhouette(ctx, palette.silhouetteKind, x, y, size);
+        }
       }
     }
   }
@@ -333,6 +338,35 @@ export function impactShake(feedback) {
   return { x: 0, y: Math.sin(progress * Math.PI * 3) * 2.6 * fade };
 }
 
+// Fundo em tela cheia atrás do palco. O jogo ocupava 31% da largura no desktop,
+// com o resto vazio e uma barra de texto ao lado: lia como jogo de celular
+// embutido numa página. Agora a janela inteira é mundo do jogo.
+export function createBackdropRenderer(canvas) {
+  const context = canvas?.getContext?.('2d') ?? null;
+  let size = { width: 1, height: 1, dpr: 1 };
+
+  return {
+    resize({ width = 1, height = 1, dpr = 1 } = {}) {
+      const safeDpr = Math.max(1, Math.min(2, dpr));
+      size = { width: Math.max(1, width), height: Math.max(1, height), dpr: safeDpr };
+      canvas.width = Math.round(size.width * safeDpr);
+      canvas.height = Math.round(size.height * safeDpr);
+      return size;
+    },
+    render(snapshot = {}) {
+      if (!context) return;
+      const palette = getBiome(snapshot.route?.biome);
+      context.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
+      // paralaxe mais lenta que a do palco: o fundo distante fica atrás de tudo
+      drawBackground(context, (snapshot.cameraY ?? 0) * 0.55, palette, size.width, size.height);
+      context.globalAlpha = 0.42;
+      context.fillStyle = palette.shade;
+      context.fillRect(0, 0, size.width, size.height);
+      context.globalAlpha = 1;
+    },
+  };
+}
+
 export function createCanvasRenderer(canvas) {
   const context = canvas.getContext?.('2d') ?? null;
   let transform = { scale: 1, offsetX: 0, offsetY: 0, dpr: 1 };
@@ -367,14 +401,13 @@ export function createCanvasRenderer(canvas) {
     for (const platform of snapshot.platforms ?? []) drawLeaf(context, platform, cameraY, palette);
     for (const sun of snapshot.sunDrops ?? []) drawSun(context, sun, cameraY, palette);
     drawImpactDust(context, feedback, cameraY, palette);
-    if (snapshot.player) drawPip(
-      context,
-      snapshot.player,
-      cameraY,
-      snapshot.visualTier,
-      feedback,
-      palette,
-    );
+    // Pip atravessando a borda aparece dos dois lados, na mesma posição em que
+    // colide. Desenhar só uma cópia faria ele sumir no meio da travessia.
+    if (snapshot.player) {
+      for (const ghost of playerGhosts(snapshot.player, LOGICAL_WIDTH)) {
+        drawPip(context, ghost, cameraY, snapshot.visualTier, feedback, palette);
+      }
+    }
     drawCollectBurst(context, feedback, cameraY, palette);
     drawMilestoneGlow(context, feedback, cameraY, palette);
     drawDeathFade(context, feedback, palette);

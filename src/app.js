@@ -2,7 +2,7 @@ import { createRun } from './game/model.js';
 import { createGameLoop } from './game/game-loop.js';
 import { bindInput, createInputState } from './input.js';
 import { stepRun } from './game/simulation.js';
-import { createCanvasRenderer } from './render/canvas-renderer.js';
+import { createCanvasRenderer, createBackdropRenderer } from './render/canvas-renderer.js';
 import { getVisualTier, getCurrentRoute, applyRouteResult, migrateProgress, selectRoute } from './game/progression.js';
 import { createObjectiveTracker, trackObjective, evaluateObjective, getRoute, getNextRoute } from './game/campaign.js';
 import { shouldPause, shouldResume } from './game/pause.js';
@@ -46,19 +46,10 @@ export function createApp(
   documentRef.title = translator.t('title');
   gameRoot.setAttribute('aria-label', translator.t('game'));
   canvas.setAttribute('aria-label', translator.t('canvas'));
-  const guide = gameRoot.querySelector('#desktop-guide');
-  if (guide) {
-    guide.querySelector('.eyebrow').textContent = translator.t('guide.eyebrow');
-    guide.querySelector('h2').textContent = translator.t('guide.title');
-    guide.querySelector('p:not(.eyebrow)').textContent = translator.t('guide.intro');
-    const guideItems = guide.querySelectorAll('li');
-    [translator.t('guide.safe'), translator.t('guide.shield'), translator.t('guide.summit')]
-      .forEach((text, index) => { if (guideItems[index]) guideItems[index].textContent = text; });
-    guide.querySelector('.guide-note').textContent = translator.t('guide.note');
-  }
   const input = createInputState();
   const unbindInput = bindInput(canvas, input);
   const renderer = createCanvasRenderer(canvas);
+  const backdrop = createBackdropRenderer(documentRef.querySelector('#backdrop-canvas'));
   const safeStorage = createSafeStorage(getBrowserStorage(documentRef));
   let progress = migrateProgress(safeStorage.load());
   let route = getCurrentRoute(progress);
@@ -89,6 +80,7 @@ export function createApp(
     hud.update(simulation.run);
     screens.showReady();
     campaign?.hide();
+    backdrop.render(simulation.run);
     renderer.render(simulation.run);
     loop.resume();
   };
@@ -228,18 +220,24 @@ export function createApp(
       }
     },
   };
-  const resize = () => renderer.resize({
-    width: canvas.clientWidth || 360,
-    height: canvas.clientHeight || 640,
-    dpr: documentRef.defaultView?.devicePixelRatio || 1,
-  });
+  const resize = () => {
+    const view = documentRef.defaultView;
+    const dpr = view?.devicePixelRatio || 1;
+    renderer.resize({ width: canvas.clientWidth || 360, height: canvas.clientHeight || 640, dpr });
+    backdrop.resize({ width: view?.innerWidth || 360, height: view?.innerHeight || 640, dpr });
+    backdrop.render(simulation.run);
+  };
   resize();
   renderer.render(simulation.run);
   hud.update(simulation.run);
   hud.showNextObjective(simulation.run.nextUnlock);
   screens.showReady();
-  loop = createGameLoop({ canvas, simulation, renderer, ui, input });
+  loop = createGameLoop({ canvas, simulation, renderer, backdrop, ui, input });
   documentRef.defaultView?.addEventListener('resize', resize);
+  // O primeiro resize pode acontecer antes de o layout assentar; repetir no load
+  // garante que o fundo cubra a janela inteira desde o começo.
+  documentRef.defaultView?.addEventListener('load', resize, { once: true });
+  documentRef.defaultView?.addEventListener('orientationchange', resize);
   loop.start();
   return {
     gameRoot,

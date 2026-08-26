@@ -9,20 +9,10 @@
   </head>
   <body>
     <main id="game" aria-label="Sproutbound">
+      <canvas id="backdrop-canvas" class="backdrop" aria-hidden="true"></canvas>
       <div class="game-layout">
-        <aside id="desktop-guide" class="desktop-guide" aria-label="Run guide">
-          <p class="eyebrow">RUN GUIDE</p>
-          <h2>Reach the summit.</h2>
-          <p>Guide Pip from leaf to leaf and collect solar drops on the way up.</p>
-          <ul>
-            <li>First 30 m: safe rhythm</li>
-            <li>5 drops: solar shield</li>
-            <li>249 m: summit reward</li>
-          </ul>
-          <p class="guide-note">One touch starts the run. Hold left or right to steer.</p>
-        </aside>
         <section class="stage-shell" aria-label="Game area">
-          <canvas id="game-canvas" tabindex="0" aria-describedby="ready-screen desktop-guide" aria-label="Sproutbound game"></canvas>
+          <canvas id="game-canvas" tabindex="0" aria-describedby="ready-screen goal-banner" aria-label="Sproutbound game"></canvas>
           <div id="hud" class="hud" aria-live="polite">
             <div class="hud-stat" aria-label="Current height">
               <span>Height</span>

@@ -10,7 +10,7 @@ export function advanceCamera(run, viewportHeight) {
   return Math.min(current, target);
 }
 
-export function createGameLoop({ canvas, simulation, renderer, ui, input }) {
+export function createGameLoop({ canvas, simulation, renderer, backdrop = null, ui, input }) {
   const view = canvas.ownerDocument?.defaultView ?? globalThis;
   const request = view.requestAnimationFrame?.bind(view);
   const cancel = view.cancelAnimationFrame?.bind(view);
@@ -36,6 +36,7 @@ export function createGameLoop({ canvas, simulation, renderer, ui, input }) {
       feedback,
       cameraY: advanceCamera(result.run, LOGICAL_HEIGHT),
     };
+    backdrop?.render(simulation.run);
     renderer?.render(simulation.run);
     ui?.update(simulation.run, result.events, elapsed);
     animationFrame = request?.(frame) ?? null;

@@ -26,7 +26,11 @@ test('shell exposes accessible HUD, objective, pause state and explicit restart'
   assert.match(html, /Play again/);
   assert.match(html, /RUN OVER/);
   assert.match(html, /Next: Two-leaf sprout/);
-  assert.match(html, /id=["']desktop-guide["']/);
+  // a barra de texto lateral saiu: o objetivo vive no HUD e os controles na tela
+  // inicial, e o fundo em tela cheia ocupa o espaço que ela desperdiçava
+  assert.doesNotMatch(html, /id=["']desktop-guide["']/);
+  assert.match(html, /id=["']backdrop-canvas["']/);
+  assert.match(html, /id=["']goal-banner["']/);
   assert.match(html, /tabindex=["']0["']/);
   assert.match(html, /id=["']solar-counter["']/);
 });

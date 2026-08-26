@@ -20,8 +20,9 @@ import { createWorld } from '../src/game/world.js';
 import { getMilestones } from '../src/game/progression.js';
 import { getRoutes, getRoute, BIOMES } from '../src/game/campaign.js';
 import { createFeedbackState, stepFeedback, PULSE_SECONDS } from '../src/game/feedback.js';
-import { createCanvasRenderer } from '../src/render/canvas-renderer.js';
+import { createCanvasRenderer, createBackdropRenderer } from '../src/render/canvas-renderer.js';
 import { createAudio, getBiomeScale } from '../src/audio.js';
+import { wrapX, playerGhosts, rectsOverlap } from '../src/game/player.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MANUAL_LOG = path.join(ROOT, 'docs', 'gate-manual-evidence.json');
@@ -445,6 +446,72 @@ check('BIOME-2', 'O fundo se move enquanto Pip sobe', () => {
     detail: ok
       ? `a silhueta de fundo é diferente em ${distinct.size} alturas distintas`
       : `${heights.length - distinct.size + 1} alturas desenham o mesmo fundo: a paralaxe não chega à tela`,
+  };
+});
+
+check('DESKTOP-1', 'A janela inteira é mundo do jogo', () => {
+  // O jogo ocupava 31% da largura no desktop, com faixa vazia e uma barra de
+  // texto ao lado. O que importa não é a coluna jogável ser larga, é não sobrar
+  // vazio: o fundo precisa cobrir a viewport em qualquer proporção.
+  const cover = (width, height) => {
+    let painted = null;
+    const context = new Proxy({}, {
+      get: (_t, prop) => {
+        if (prop === 'createLinearGradient') return () => ({ addColorStop: () => {} });
+        if (prop === 'fillRect') return (x, y, w, h) => { if (w >= width && h >= height) painted = { x, y, w, h }; };
+        if (typeof prop === 'string') return () => undefined;
+        return () => undefined;
+      },
+      set: () => true,
+    });
+    const backdrop = createBackdropRenderer({ getContext: () => context });
+    backdrop.resize({ width, height, dpr: 1 });
+    backdrop.render({ route: { biome: 'canopy' }, cameraY: -400 });
+    return painted;
+  };
+
+  const problems = [];
+  for (const [width, height] of [[1280, 720], [1920, 1080], [907, 510], [375, 812]]) {
+    const painted = cover(width, height);
+    if (!painted) problems.push(`${width}x${height} não é coberto pelo fundo`);
+    else if (painted.x > 0 || painted.y > 0) problems.push(`${width}x${height} deixa faixa em ${painted.x},${painted.y}`);
+  }
+  const html = readFileSafe('index.html') ?? '';
+  if (!/id="backdrop-canvas"/.test(html)) problems.push('sem canvas de fundo na marcação');
+  if (/id="desktop-guide"/.test(html)) problems.push('a barra de texto lateral ainda ocupa o espaço');
+
+  return {
+    ok: problems.length === 0,
+    detail: problems.length ? problems.join('; ') : 'fundo cobre a viewport em 4 proporções, sem faixa vazia',
+  };
+});
+
+check('WRAP-1', 'A borda lateral atravessa em vez de bloquear', () => {
+  const stage = 360;
+  const width = 26;
+  const problems = [];
+
+  // continuidade: nenhum salto entre passos vizinhos
+  let previous = wrapX(-width, width, stage);
+  for (let x = -width; x < stage + width; x += 1) {
+    const current = wrapX(x, width, stage);
+    const jump = Math.abs(current - previous);
+    if (jump > 1 && Math.abs(jump - stage) > 1) { problems.push(`salto de ${jump.toFixed(1)}px em x=${x}`); break; }
+    previous = current;
+  }
+
+  // a cópia da borda precisa colidir, não só aparecer
+  const straddling = { x: -13, y: 100, width, height: 34 };
+  const leafOnFarEdge = { x: 340, y: 100, width: 20, height: 18 };
+  const ghosts = playerGhosts(straddling, stage);
+  if (ghosts.length !== 2) problems.push('atravessando a borda Pip não existe dos dois lados');
+  if (!ghosts.some((ghost) => rectsOverlap(ghost, leafOnFarEdge))) {
+    problems.push('a cópia da borda não colide: envoltória que desenha e não colide é pior que a parede');
+  }
+
+  return {
+    ok: problems.length === 0,
+    detail: problems.length ? problems.join('; ') : 'travessia contínua e colidindo dos dois lados',
   };
 });
 

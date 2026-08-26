@@ -1,4 +1,4 @@
-import { PLAYER_BOUNCE, rectsOverlap, stepPlayer } from './player.js';
+import { PLAYER_BOUNCE, rectsOverlap, stepPlayer, playerGhosts } from './player.js';
 
 const WORLD_BOUNDS = { width: 360, height: 640 };
 export const HEIGHT_PIXELS_PER_METER = 12;
@@ -105,8 +105,9 @@ export function stepRun(run, input = {}, dt) {
   const nextUnlock = run.nextUnlock ?? null;
   const events = [...platformState.events];
   if (started) events.push('gameplayStarted');
+  const ghosts = playerGhosts(player, WORLD_BOUNDS.width);
   const hazardPlatform = platforms.find((platform) => (
-    platform.kind === 'thorn-leaf' && rectsOverlap(player, platform)
+    platform.kind === 'thorn-leaf' && ghosts.some((ghost) => rectsOverlap(ghost, platform))
   ));
   const hitHazardPlatform = Boolean(hazardPlatform);
   if (hitHazardPlatform) events.push('hazardHit');
@@ -116,8 +117,9 @@ export function stepRun(run, input = {}, dt) {
     const currentBottom = player.y + player.height;
     const platform = platforms.find((candidate) => {
       if (candidate.collapsing || candidate.collapsed) return false;
-      const horizontallyAligned = player.x < candidate.x + candidate.width
-        && player.x + player.width > candidate.x;
+      const horizontallyAligned = ghosts.some((ghost) => (
+        ghost.x < candidate.x + candidate.width && ghost.x + ghost.width > candidate.x
+      ));
       return horizontallyAligned
         && previousBottom <= candidate.y
         && currentBottom >= candidate.y;
@@ -154,7 +156,7 @@ export function stepRun(run, input = {}, dt) {
   const measuredHeight = Math.floor(Math.max(0, (startY - player.y) / HEIGHT_PIXELS_PER_METER));
   score = Math.max(score, measuredHeight);
 
-  const collectedSunDrops = sunDrops.filter((sun) => circleOverlapsRect(sun, player));
+  const collectedSunDrops = sunDrops.filter((sun) => ghosts.some((ghost) => circleOverlapsRect(sun, ghost)));
   if (collectedSunDrops.length > 0) {
     const collectedAmount = collectedSunDrops.length;
     sunCount += collectedAmount;
@@ -183,7 +185,7 @@ export function stepRun(run, input = {}, dt) {
     && score >= run.summitHeight;
   if (reachedSummit) events.push('summitReached');
 
-  const hitThorn = run.thorns.some((thorn) => rectsOverlap(player, thorn));
+  const hitThorn = run.thorns.some((thorn) => playerGhosts(player, WORLD_BOUNDS.width).some((ghost) => rectsOverlap(ghost, thorn)));
   const fell = player.y > (run.cameraY ?? 0) + 740;
   const hazardCollision = hitHazardPlatform || hitThorn;
   const shieldBlockedHazard = hazardCollision && solar.shieldAvailable;
