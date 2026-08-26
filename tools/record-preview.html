@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Sproutbound — gravador de preview</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 28px;
+    background: #071525; color: #f5f7e8;
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  .sub { margin: 0 0 22px; color: #a8bcae; max-width: 68ch; }
+  .painel { display: grid; gap: 18px; max-width: 900px; }
+  fieldset { border: 1px solid rgb(213 255 156 / 22%); border-radius: 14px; padding: 14px 16px; margin: 0; }
+  legend { padding: 0 6px; color: #9fe8b4; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  label { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
+  select, button { font: inherit; }
+  select { padding: 6px 8px; border-radius: 8px; border: 1px solid rgb(213 255 156 / 28%); background: #0d2033; color: inherit; }
+  button {
+    min-height: 44px; padding: 0 18px; border-radius: 999px; cursor: pointer;
+    border: 1px solid #9fe8b4; background: #12263a; color: #9fe8b4; font-weight: 700;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primario { background: #9fe8b4; color: #08301c; }
+  #estado { margin: 6px 0 0; color: #ffd166; font-weight: 700; min-height: 1.4em; }
+  #saida a { display: block; margin: 10px 0 0; color: #ffd166; font-weight: 700; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 10px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid rgb(213 255 156 / 14%); }
+  th { color: #a8bcae; font-weight: 600; }
+  td.ok { color: #9fe8b4; font-weight: 700; }
+  td.falha { color: #ff9b91; font-weight: 700; }
+  ul { margin: 6px 0 0; padding-left: 20px; color: #a8bcae; font-size: 13px; }
+  #palco { position: fixed; left: -20000px; top: 0; }
+  code { background: #0d2033; padding: 1px 5px; border-radius: 4px; font-size: .92em; }
+</style>
+</head>
+<body>
+
+<h1>Gravador de preview</h1>
+<p class="sub">
+  Grava o jogo real, sem som, abrindo na capa estática. O enquadramento é o mesmo do
+  desktop: o fundo do bioma preenche o quadro inteiro e a coluna jogável 9:16 fica
+  centralizada — sem barras pretas e sem cortar a área de jogo.
+</p>
+
+<div class="painel">
+  <fieldset>
+    <legend>Formato</legend>
+    <label><input type="radio" name="formato" value="landscape" checked> Landscape 1920×1080</label>
+    <label><input type="radio" name="formato" value="portrait"> Portrait 1080×1620</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Cena</legend>
+    <label>Rota <select id="rota"></select></label>
+    <label>Duração <select id="duracao">
+      <option value="16">16 s</option>
+      <option value="17" selected>17 s</option>
+      <option value="18">18 s</option>
+    </select></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Gravar</legend>
+    <button id="btn-gravar" class="primario">Gravar</button>
+    <button id="btn-ambos">Gravar os dois formatos</button>
+    <p id="estado">pronto</p>
+    <div id="saida"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Conferência automática</legend>
+    <table id="conferencia"><tbody><tr><td>Grave para conferir.</td></tr></tbody></table>
+    <ul>
+      <li>Exigido: 1080p, 15 a 20 s, até 50 MB, sem som, sem cursor, sem texto promocional.</li>
+      <li>Se sair em WebM, converta para MP4 antes de enviar: <code>ffmpeg -i entrada.webm -c:v libx264 -crf 20 -pix_fmt yuv420p -an saida.mp4</code></li>
+    </ul>
+  </fieldset>
+</div>
+
+<div id="palco"><canvas id="game-canvas"></canvas></div>
+
+<script type="module">
+import { createRun } from '../src/game/model.js';
+import { stepRun } from '../src/game/simulation.js';
+import { createCanvasRenderer, createBackdropRenderer } from '../src/render/canvas-renderer.js';
+import { createFeedbackState, stepFeedback } from '../src/game/feedback.js';
+import { getRoutes, getRoute, getBiome, createObjectiveTracker, trackObjective } from '../src/game/campaign.js';
+import { createTranslator, objectiveText, routeLabel } from '../src/i18n.js';
+
+const STAGE_W = 360;
+const STAGE_H = 640;
+const CAPA_MS = 1300;
+
+const FORMATOS = {
+  landscape: { largura: 1920, altura: 1080, capa: 'sproutbound-landscape' },
+  portrait: { largura: 1080, altura: 1620, capa: 'sproutbound-portrait' },
+};
+
+const traduzir = createTranslator('en');
+const estado = document.querySelector('#estado');
+const saida = document.querySelector('#saida');
+const conferencia = document.querySelector('#conferencia').querySelector('tbody');
+const dizer = (texto) => { estado.textContent = texto; };
+
+// rotas: preferir as que já têm variedade visual
+const seletorRota = document.querySelector('#rota');
+for (const rota of getRoutes()) {
+  const opcao = document.createElement('option');
+  opcao.value = String(rota.order);
+  opcao.textContent = `${routeLabel(traduzir, rota)} — ${objectiveText(traduzir, rota.objective)}`;
+  if (rota.order === 7) opcao.selected = true;
+  seletorRota.append(opcao);
+}
+
+async function carregarCapa(nome) {
+  const texto = await (await fetch(`../media/covers/${nome}.svg`)).text();
+  const url = URL.createObjectURL(new Blob([texto], { type: 'image/svg+xml;charset=utf-8' }));
+  const img = new Image();
+  await new Promise((ok, err) => { img.onload = ok; img.onerror = err; img.src = url; });
+  return img;
+}
+
+// Piloto determinístico: desvia do espinho da linha e persegue a folha alcançável
+// mais próxima. A gravação nunca mostra uma morte precoce.
+function pilotar(run) {
+  const p = run.player;
+  const plataformas = run.platforms ?? [];
+  const acima = plataformas
+    .filter((x) => x.y < p.y - 4 && !x.collapsed && x.kind !== 'thorn-leaf')
+    .sort((a, b) => b.y - a.y)[0];
+  let alvo = STAGE_W / 2;
+  if (acima) {
+    alvo = acima.x + acima.width / 2;
+    const espinho = plataformas.find((x) => x.kind === 'thorn-leaf' && Math.abs(x.y - acima.y) < 2);
+    if (espinho) {
+      const margem = p.width / 2 + 4;
+      alvo = espinho.x > acima.x ? acima.x + margem : acima.x + acima.width - margem;
+    }
+  }
+  const centro = p.x + p.width / 2;
+  return { left: centro - alvo > 6, right: alvo - centro > 6 };
+}
+
+// HUD desenhado no quadro: são elementos reais do jogo, não texto promocional.
+function desenharHud(ctx, run, objetivo, caixa, escala) {
+  const pad = Math.round(18 * escala);
+  ctx.save();
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(232, 244, 236, 0.72)';
+  ctx.font = `700 ${Math.round(13 * escala)}px system-ui, sans-serif`;
+  ctx.fillText(routeLabel(traduzir, run.route).toUpperCase(), caixa.x + pad, caixa.y + pad);
+
+  ctx.fillStyle = '#f5f7e8';
+  ctx.font = `800 ${Math.round(30 * escala)}px system-ui, sans-serif`;
+  ctx.fillText(`${run.score} m`, caixa.x + pad, caixa.y + pad + Math.round(18 * escala));
+
+  const texto = `Goal: ${objectiveText(traduzir, run.route?.objective)}`;
+  ctx.font = `600 ${Math.round(13 * escala)}px system-ui, sans-serif`;
+  const largura = ctx.measureText(texto).width + Math.round(20 * escala);
+  const alturaFaixa = Math.round(26 * escala);
+  const fy = caixa.y + pad + Math.round(58 * escala);
+  ctx.fillStyle = 'rgba(12, 26, 20, 0.62)';
+  ctx.strokeStyle = 'rgba(255, 209, 102, 0.34)';
+  ctx.lineWidth = Math.max(1, escala);
+  ctx.beginPath();
+  ctx.roundRect(caixa.x + pad, fy, largura, alturaFaixa, alturaFaixa / 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#ffe9a8';
+  ctx.fillText(texto, caixa.x + pad + Math.round(10 * escala), fy + Math.round(5 * escala));
+
+  if (objetivo.type === 'collect') {
+    ctx.fillStyle = 'rgba(232, 244, 236, 0.8)';
+    ctx.fillText(`${objetivo.drops}/${objetivo.target}`, caixa.x + pad + largura + Math.round(10 * escala), fy + Math.round(5 * escala));
+  }
+  ctx.restore();
+}
+
+function escolherMime() {
+  const candidatos = [
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm',
+  ];
+  return candidatos.find((tipo) => MediaRecorder.isTypeSupported(tipo)) ?? '';
+}
+
+async function gravar(chave, ordemRota, segundos) {
+  const formato = FORMATOS[chave];
+  document.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+  dizer('preparando…');
+
+  const rota = getRoute(Number(ordemRota));
+  const capa = await carregarCapa(formato.capa);
+
+  // palco 9:16 centralizado, fundo do bioma preenchendo o quadro: mesmo
+  // enquadramento do desktop, sem barra preta e sem cortar a área de jogo.
+  const alturaPalco = formato.altura;
+  const larguraPalco = Math.round(alturaPalco * (STAGE_W / STAGE_H));
+  const escala = alturaPalco / STAGE_H;
+  const caixa = { x: Math.round((formato.largura - larguraPalco) / 2), y: 0, w: larguraPalco, h: alturaPalco };
+
+  const jogo = document.querySelector('#game-canvas');
+  jogo.width = larguraPalco;
+  jogo.height = alturaPalco;
+  const renderer = createCanvasRenderer(jogo);
+  renderer.resize({ width: larguraPalco, height: alturaPalco, dpr: 1 });
+
+  const fundoCanvas = document.createElement('canvas');
+  fundoCanvas.width = formato.largura;
+  fundoCanvas.height = formato.altura;
+  const fundo = createBackdropRenderer(fundoCanvas);
+  fundo.resize({ width: formato.largura, height: formato.altura, dpr: 1 });
+
+  const alvo = document.createElement('canvas');
+  alvo.width = formato.largura;
+  alvo.height = formato.altura;
+  const ctx = alvo.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+
+  let run = createRun(rota, { version: 2, bestHeight: 0, unlocked: [], routes: {}, currentRoute: rota.id });
+  let resultado = stepRun(run, { primary: true }, 0);
+  run = resultado.run;
+  let feedback = createFeedbackState();
+  let objetivo = createObjectiveTracker(rota);
+
+  const fluxo = alvo.captureStream(60);
+  const mime = escolherMime();
+  const partes = [];
+  const gravador = new MediaRecorder(fluxo, mime ? { mimeType: mime, videoBitsPerSecond: 10_000_000 } : { videoBitsPerSecond: 10_000_000 });
+  gravador.ondataavailable = (e) => { if (e.data.size) partes.push(e.data); };
+
+  gravador.start();
+  const inicio = performance.now();
+  let t = 0;
+  const dt = 1 / 60;
+
+  await new Promise((resolve) => {
+    const passo = () => {
+      const decorrido = performance.now() - inicio;
+      if (decorrido >= segundos * 1000) { resolve(); return; }
+
+      if (decorrido < CAPA_MS) {
+        ctx.drawImage(capa, 0, 0, formato.largura, formato.altura);
+      } else {
+        if (run.state === 'playing') {
+          resultado = stepRun(run, pilotar(run), dt);
+          run = resultado.run;
+          feedback = stepFeedback(feedback, resultado.events, dt, { player: run.player });
+          objetivo = trackObjective(objetivo, resultado.events, dt);
+          t += dt;
+        }
+        const cena = { ...run, feedback, cameraY: Math.min(0, run.player.y - STAGE_H * 0.36) };
+        fundo.render(cena);
+        renderer.render(cena);
+        ctx.drawImage(fundoCanvas, 0, 0);
+        ctx.drawImage(jogo, caixa.x, caixa.y);
+        desenharHud(ctx, cena, objetivo, caixa, escala);
+      }
+      dizer(`gravando ${(decorrido / 1000).toFixed(1)}s de ${segundos}s`);
+      requestAnimationFrame(passo);
+    };
+    requestAnimationFrame(passo);
+  });
+
+  gravador.stop();
+  await new Promise((r) => { gravador.onstop = r; });
+
+  const tipo = mime || 'video/webm';
+  const blob = new Blob(partes, { type: tipo });
+  const extensao = tipo.includes('mp4') ? 'mp4' : 'webm';
+  const nome = `sproutbound-${chave}-preview.${extensao}`;
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = nome;
+  link.textContent = `Baixar ${nome} — ${formato.largura}×${formato.altura}, ${(blob.size / 1024 / 1024).toFixed(1)} MB`;
+  saida.append(link);
+
+  conferir(chave, { formato, blob, segundos, tipo, fluxo, alturaFinal: run.score });
+  dizer(`pronto: ${chave}`);
+  document.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+  return { chave, bytes: blob.size, tipo };
+}
+
+function conferir(chave, { formato, blob, segundos, tipo, fluxo, alturaFinal }) {
+  const alvoLargura = chave === 'landscape' ? 1920 : 1080;
+  const linhas = [
+    ['Formato', `${formato.largura}×${formato.altura}`, formato.largura >= alvoLargura],
+    ['Duração', `${segundos} s`, segundos >= 15 && segundos <= 20],
+    ['Tamanho', `${(blob.size / 1024 / 1024).toFixed(1)} MB`, blob.size <= 50 * 1024 * 1024],
+    ['Faixas de áudio', String(fluxo.getAudioTracks().length), fluxo.getAudioTracks().length === 0],
+    ['Contêiner', tipo.includes('mp4') ? 'MP4' : 'WebM — converter', tipo.includes('mp4')],
+    ['Gameplay real', `subiu até ${alturaFinal} m`, alturaFinal > 20],
+  ];
+  const html = [`<tr><th colspan="3">${chave}</th></tr>`];
+  for (const [rotulo, valor, ok] of linhas) {
+    html.push(`<tr><th>${rotulo}</th><td>${valor}</td><td class="${ok ? 'ok' : 'falha'}">${ok ? 'OK' : 'ajustar'}</td></tr>`);
+  }
+  if (conferencia.querySelector('td')?.textContent === 'Grave para conferir.') conferencia.innerHTML = '';
+  conferencia.insertAdjacentHTML('beforeend', html.join(''));
+}
+
+const formatoEscolhido = () => document.querySelector('input[name="formato"]:checked').value;
+const duracaoEscolhida = () => Number(document.querySelector('#duracao').value);
+
+document.querySelector('#btn-gravar').addEventListener('click', () => {
+  gravar(formatoEscolhido(), seletorRota.value, duracaoEscolhida());
+});
+document.querySelector('#btn-ambos').addEventListener('click', async () => {
+  await gravar('landscape', seletorRota.value, duracaoEscolhida());
+  await gravar('portrait', seletorRota.value, duracaoEscolhida());
+});
+
+window.gravar = gravar;
+</script>
+</body>
+</html>

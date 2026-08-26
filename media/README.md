@@ -14,9 +14,11 @@ PNG exports are ready for upload:
 - `sproutbound-portrait.png`: 800×1200
 - `sproutbound-square.png`: 800×800
 
-The original MP4 files without `-quality` remain lightweight visual drafts generated from the covers. The `-quality` files are the new candidate previews captured from the running local build with `?lang=en`, after a real first input and steering sequence:
+Preview videos are recorded with `tools/record-preview.html`; the procedure and the
+platform requirements are in [`docs/preview-videos.md`](../docs/preview-videos.md).
 
-- `sproutbound-landscape-preview-quality.mp4`: 1280×720, 10 seconds, silent, H.264.
-- `sproutbound-portrait-preview-quality.mp4`: 800×1200, 10 seconds, silent, H.264.
-
-The quality captures show gameplay only and contain no debug UI. Inspect them before uploading; the CrazyGames preview guidance expects the video to represent gameplay and not be misleading.
+The old `*-preview-quality.mp4` files are **not** submittable: 1280x720 and 800x1200 at 10
+seconds, against a requirement of 1080p and 15 to 20 seconds. The files without the suffix
+were generated from the covers and are not gameplay at all. Delete both sets once the real
+takes are recorded; `npm run gate` fails while any unexpected preview file remains in the
+folder.

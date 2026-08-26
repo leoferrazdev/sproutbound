@@ -79,6 +79,11 @@ npm run presubmit
 
 Runs tests, build audit and the gate in sequence.
 
+## Preview videos
+
+Recorded with `tools/record-preview.html` in a visible tab. Requirements and procedure in
+[`docs/preview-videos.md`](docs/preview-videos.md).
+
 ## Validation
 
 ```powershell

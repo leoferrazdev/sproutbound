@@ -535,8 +535,21 @@ check('P0-4', 'Vídeos de preview dentro da especificação', () => {
     { id: 'portrait', minWidth: THRESHOLDS.video.minPortraitWidth },
   ];
   const problems = [];
+
+  // Arquivo antigo fora de especificação não pode sobrar na pasta: foi assim que
+  // a segunda submissão enviou um preview pior que o da primeira.
+  const dir = path.join(ROOT, 'media', 'videos');
+  const esperados = new Set(wanted.map((item) => `sproutbound-${item.id}-preview.mp4`));
+  if (fs.existsSync(dir)) {
+    for (const file of fs.readdirSync(dir)) {
+      if (/preview/i.test(file) && !esperados.has(file)) {
+        problems.push(`arquivo antigo na pasta: ${file}, remova para não enviar por engano`);
+      }
+    }
+  }
+
   for (const item of wanted) {
-    const candidates = ['media/videos/sproutbound-' + item.id + '-preview-final.mp4', 'media/videos/sproutbound-' + item.id + '-preview.mp4'];
+    const candidates = ['media/videos/sproutbound-' + item.id + '-preview.mp4'];
     const found = candidates.map((c) => path.join(ROOT, c)).find((f) => fs.existsSync(f));
     if (!found) { problems.push(`${item.id}: nenhum vídeo encontrado`); continue; }
     const buffer = fs.readFileSync(found);

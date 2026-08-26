@@ -4,10 +4,12 @@
 
 O GamePix recebe o build-base offline do Sproutbound. Não será criada uma variante com SDK, anúncios ou requests externos: o pacote já contém `index.html` na raiz, caminhos relativos e os mesmos arquivos que foram auditados para o MVP.
 
-Artefato definido:
+Artefato gerado pelo perfil GamePix:
 
-- `submission/sproutbound-basic-launch.zip`
-- Próxima release de qualidade: `submission/sproutbound-quality-0.2.0.zip`
+- `submission/sproutbound-quality-0.2.0-gamepix-build/`
+- `submission/sproutbound-quality-0.2.0-gamepix.zip`
+
+O comando oficial é `npm run build:gamepix`. O ZIP deve conter `index.html` na raiz e o diretório do pacote não deve ser confundido com variantes de outra plataforma. Artefatos antigos permanecem apenas como evidência histórica e não são sobrescritos.
 
 O pacote não deve incluir `submission/`, fontes do projeto, notas internas, credenciais ou ferramentas de desenvolvimento. O mesmo build jogável pode ser distribuído em diferentes portais; apenas metadados, capas, checklist e integrações autorizadas permanecem específicos de cada plataforma.
 
@@ -29,7 +31,7 @@ O registro `my.gamepix.com/games/sproutbound` foi criado, o portal liberou a eta
 - [x] Título definido.
 - [x] Categoria principal definida.
 - [x] Quatro tags específicas definidas.
-- [x] Build-base offline existente e separado das variantes de plataforma.
+- [x] Build GamePix offline gerado pelo perfil específico e separado das variantes de plataforma.
 - [x] Descrição autoral de 100–500 caracteres.
 - [x] Criar o registro no portal.
 - [x] Upload do ZIP do build-base.
@@ -47,9 +49,10 @@ O registro `my.gamepix.com/games/sproutbound` foi criado, o portal liberou a eta
 
 ```powershell
 cd D:\LEONARDO\Games\sproutbound
+npm run build:gamepix
 npm test
 npm run check:build
-tar -tf submission\sproutbound-basic-launch.zip
+tar -tf submission\sproutbound-quality-0.2.0-gamepix.zip
 ```
 
 O resultado esperado é uma suíte verde, auditoria sem URL externa ou `console.log`, bundle inicial abaixo de 8 MB e `index.html` na raiz do ZIP.
