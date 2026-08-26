@@ -98,6 +98,47 @@ const FORMATOS = {
 };
 
 const traduzir = createTranslator('en');
+
+// Tokens lidos do styles.css do jogo, não copiados. O gravador desenhava o HUD
+// com cores fixas e ficou defasado assim que o HUD mudou: o vídeo mostrava uma
+// interface que não existia mais, incluindo a superfície de baixo contraste que
+// havia sido corrigida. Lendo do mesmo lugar, não há como divergir.
+let TOKENS = {
+  surface: 'rgb(6 18 32 / 82%)',
+  border: 'rgb(213 255 156 / 26%)',
+  ink: '#f5f7e8',
+  inkSoft: 'rgb(232 244 236 / 78%)',
+  accent: '#ffd166',
+  goal: '#ffe9a8',
+  radius: 12,
+  padX: 10,
+  padY: 7,
+  label: 12,
+};
+
+async function carregarTokens() {
+  try {
+    const css = await (await fetch('../styles.css')).text();
+    const ler = (nome) => css.match(new RegExp(`--hud-${nome}:\s*([^;]+);`))?.[1].trim();
+    const num = (nome, padrao) => {
+      const bruto = ler(nome);
+      const valor = bruto && Number.parseFloat(bruto);
+      return Number.isFinite(valor) ? valor : padrao;
+    };
+    TOKENS = {
+      surface: ler('surface') ?? TOKENS.surface,
+      border: ler('border') ?? TOKENS.border,
+      ink: ler('ink') ?? TOKENS.ink,
+      inkSoft: ler('ink-soft') ?? TOKENS.inkSoft,
+      accent: ler('accent') ?? TOKENS.accent,
+      goal: ler('goal') ?? TOKENS.goal,
+      radius: num('radius', TOKENS.radius),
+      padX: num('pad-x', TOKENS.padX),
+      padY: num('pad-y', TOKENS.padY),
+      label: num('label', TOKENS.label),
+    };
+  } catch { /* os padrões acima mantêm o gravador utilizável */ }
+}
 const estado = document.querySelector('#estado');
 const saida = document.querySelector('#saida');
 const conferencia = document.querySelector('#conferencia').querySelector('tbody');
@@ -142,38 +183,87 @@ function pilotar(run) {
   return { left: centro - alvo > 6, right: alvo - centro > 6 };
 }
 
-// HUD desenhado no quadro: são elementos reais do jogo, não texto promocional.
+// HUD desenhado no quadro, espelhando o HUD real: mesmos tokens de superfície,
+// mesmos indicadores. Os botões de controle ficam de fora — são affordances para
+// quem joga, não conteúdo de gameplay, e um vídeo não é clicável.
+function chip(ctx, x, y, w, h, raio) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, raio);
+  ctx.fillStyle = TOKENS.surface;
+  ctx.fill();
+  ctx.strokeStyle = TOKENS.border;
+  ctx.stroke();
+}
+
 function desenharHud(ctx, run, objetivo, caixa, escala) {
-  const pad = Math.round(18 * escala);
+  const px = (valor) => Math.round(valor * escala);
+  const padX = px(TOKENS.padX);
+  const padY = px(TOKENS.padY);
+  const raio = px(TOKENS.radius);
+  const rotulo = px(TOKENS.label);
+  const gap = px(8);
+  const margem = px(14);
+
   ctx.save();
   ctx.textBaseline = 'top';
-  ctx.fillStyle = 'rgba(232, 244, 236, 0.72)';
-  ctx.font = `700 ${Math.round(13 * escala)}px system-ui, sans-serif`;
-  ctx.fillText(routeLabel(traduzir, run.route).toUpperCase(), caixa.x + pad, caixa.y + pad);
-
-  ctx.fillStyle = '#f5f7e8';
-  ctx.font = `800 ${Math.round(30 * escala)}px system-ui, sans-serif`;
-  ctx.fillText(`${run.score} m`, caixa.x + pad, caixa.y + pad + Math.round(18 * escala));
-
-  const texto = `Goal: ${objectiveText(traduzir, run.route?.objective)}`;
-  ctx.font = `600 ${Math.round(13 * escala)}px system-ui, sans-serif`;
-  const largura = ctx.measureText(texto).width + Math.round(20 * escala);
-  const alturaFaixa = Math.round(26 * escala);
-  const fy = caixa.y + pad + Math.round(58 * escala);
-  ctx.fillStyle = 'rgba(12, 26, 20, 0.62)';
-  ctx.strokeStyle = 'rgba(255, 209, 102, 0.34)';
   ctx.lineWidth = Math.max(1, escala);
-  ctx.beginPath();
-  ctx.roundRect(caixa.x + pad, fy, largura, alturaFaixa, alturaFaixa / 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = '#ffe9a8';
-  ctx.fillText(texto, caixa.x + pad + Math.round(10 * escala), fy + Math.round(5 * escala));
 
-  if (objetivo.type === 'collect') {
-    ctx.fillStyle = 'rgba(232, 244, 236, 0.8)';
-    ctx.fillText(`${objetivo.drops}/${objetivo.target}`, caixa.x + pad + largura + Math.round(10 * escala), fy + Math.round(5 * escala));
+  let y = caixa.y + margem;
+  const x0 = caixa.x + margem;
+
+  // linha de topo: altura e recorde, como no HUD
+  const fonteRotulo = `800 ${rotulo}px system-ui, sans-serif`;
+  const fonteValor = `800 ${px(17)}px system-ui, sans-serif`;
+  const stats = [
+    { chave: 'HEIGHT', valor: `${run.score} m` },
+    { chave: 'BEST', valor: `${Math.max(run.score, run.bestScore ?? 0)} m` },
+  ];
+  const alturaStat = padY * 2 + rotulo + px(3) + px(17);
+  let sx = x0;
+  for (const stat of stats) {
+    ctx.font = fonteRotulo;
+    const larguraChave = ctx.measureText(stat.chave).width;
+    ctx.font = fonteValor;
+    const larguraValor = ctx.measureText(stat.valor).width;
+    const largura = Math.max(larguraChave, larguraValor) + padX * 2;
+    chip(ctx, sx, y, largura, alturaStat, raio);
+    ctx.fillStyle = TOKENS.accent;
+    ctx.font = fonteRotulo;
+    ctx.fillText(stat.chave, sx + padX, y + padY);
+    ctx.fillStyle = TOKENS.ink;
+    ctx.font = fonteValor;
+    ctx.fillText(stat.valor, sx + padX, y + padY + rotulo + px(3));
+    sx += largura + gap;
   }
+  y += alturaStat + gap;
+
+  // rótulo da rota, sem chip, como no HUD
+  ctx.fillStyle = TOKENS.inkSoft;
+  ctx.font = `700 ${rotulo}px system-ui, sans-serif`;
+  ctx.fillText(routeLabel(traduzir, run.route).toUpperCase(), x0, y);
+  y += rotulo + px(6);
+
+  // objetivo da rota, com o progresso quando é contável
+  let texto = `Goal: ${objectiveText(traduzir, run.route?.objective)}`;
+  if (objetivo.type === 'collect' && Number.isFinite(objetivo.target)) {
+    texto += ` · ${objetivo.drops}/${objetivo.target}`;
+  }
+  ctx.font = `600 ${rotulo}px system-ui, sans-serif`;
+  const larguraObjetivo = ctx.measureText(texto).width + padX * 2;
+  const alturaFaixa = padY * 2 + rotulo;
+  chip(ctx, x0, y, larguraObjetivo, alturaFaixa, alturaFaixa / 2);
+  ctx.fillStyle = TOKENS.goal;
+  ctx.fillText(texto, x0 + padX, y + padY);
+  y += alturaFaixa + gap;
+
+  // contador solar, no mesmo chip dos demais indicadores
+  const solar = `Solar light: ${objetivo.drops} · Solar charge: ${(run.solar?.charge ?? 0)}/5`;
+  ctx.font = `800 ${rotulo}px system-ui, sans-serif`;
+  const larguraSolar = ctx.measureText(solar).width + padX * 2;
+  chip(ctx, x0, y, larguraSolar, alturaFaixa, alturaFaixa / 2);
+  ctx.fillStyle = TOKENS.accent;
+  ctx.fillText(solar, x0 + padX, y + padY);
+
   ctx.restore();
 }
 
@@ -193,6 +283,7 @@ async function gravar(chave, ordemRota, segundos) {
   dizer('preparando…');
 
   const rota = getRoute(Number(ordemRota));
+  await carregarTokens();
   const capa = await carregarCapa(formato.capa);
 
   // palco 9:16 centralizado, fundo do bioma preenchendo o quadro: mesmo

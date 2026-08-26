@@ -56,8 +56,12 @@ npm run gate
   and the 3:4 playable area sits centred, scaled by whichever side limits it. No black
   bars, and no cropping of the play area. Landscape gives the stage 810 of 1920 px;
   portrait fills the full 1080 px width.
-- Draws the real HUD — route, height and the route goal. Those are game elements, not
-  promotional text.
+- Draws the real HUD — height, best, route, goal and solar light — reading the `--hud-*`
+  tokens straight from `styles.css` rather than copying colours. The first version copied
+  them and went stale the moment the HUD changed, so the video would have shipped an
+  interface that no longer existed, including the low-contrast surface that had just been
+  fixed. Control buttons stay out: they are affordances for the player, not gameplay, and a
+  video is not clickable.
 - Records with no audio track at all.
 - Prefers MP4 with H.264 when the browser supports it, which Chrome does. If it falls back
   to WebM, convert before uploading:
