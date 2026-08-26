@@ -18,7 +18,7 @@ import { createRun } from '../src/game/model.js';
 import { stepRun } from '../src/game/simulation.js';
 import { createWorld } from '../src/game/world.js';
 import { getMilestones } from '../src/game/progression.js';
-import { getRoutes, getRoute } from '../src/game/campaign.js';
+import { getRoutes, getRoute, BIOMES } from '../src/game/campaign.js';
 import { createFeedbackState, stepFeedback, PULSE_SECONDS } from '../src/game/feedback.js';
 import { createCanvasRenderer } from '../src/render/canvas-renderer.js';
 
@@ -181,6 +181,39 @@ function mp4Info(buffer) {
   return info;
 }
 
+
+// Grava cores e contagem de desenho. Serve para provar que a paleta declarada
+// chega ao pixel, e que o fundo realmente se move — os dois defeitos que a
+// auditoria encontrou: pulso calculado e nunca desenhado, paralaxe calculada e
+// aplicada a um só elemento.
+function paintProbe(snapshot) {
+  const colours = new Set();
+  const geometry = [];
+  let calls = 0;
+  const context = new Proxy({}, {
+    get: (_t, prop) => {
+      if (prop === 'createLinearGradient') return () => ({ addColorStop: (_stop, colour) => colours.add(String(colour)) });
+      if (prop === 'canvas') return { width: 360, height: 640 };
+      if (typeof prop === 'string' && /^(fill|stroke|arc|moveTo|lineTo|rect|ellipse|quadraticCurveTo|closePath)/.test(prop)) {
+        return (...args) => {
+          calls += 1;
+          // guardar a geometria permite provar movimento, e não apenas atividade
+          if (args.length >= 2 && Number.isFinite(args[1])) geometry.push(Math.round(args[1]));
+        };
+      }
+      return () => undefined;
+    },
+    set: (_t, prop, value) => {
+      if (prop === 'fillStyle' || prop === 'strokeStyle') colours.add(String(value));
+      return true;
+    },
+  });
+  const renderer = createCanvasRenderer({ width: 360, height: 640, getContext: () => context });
+  renderer.resize({ width: 360, height: 640, dpr: 1 });
+  renderer.render(snapshot);
+  return { colours, calls, geometry: geometry.join(',') };
+}
+
 // ------------------------------------------------------------------- checagens
 
 const checks = [];
@@ -302,6 +335,60 @@ check('P1-4', 'Menu, pausa e retomada por perda de foco', () => {
   return {
     ok: hasPauseScreen && pausesOnHide,
     detail: `${hasPauseScreen ? 'telas de menu/pausa presentes' : 'sem tela de menu ou pausa'}; ${pausesOnHide ? 'pausa ao perder visibilidade' : 'perder a aba não pausa a partida'}`,
+  };
+});
+
+check('BIOME-1', 'Cada bioma pinta a tela com a própria paleta', () => {
+  const player = { x: 160, y: 320, width: 26, height: 34, grounded: true, dead: false };
+  const scene = (biome) => ({
+    route: { biome },
+    player,
+    platforms: [
+      { x: 60, y: 300, width: 90, height: 18, kind: 'leaf' },
+      { x: 200, y: 220, width: 80, height: 18, kind: 'cracked-leaf' },
+      { x: 60, y: 140, width: 80, height: 18, kind: 'moving-leaf' },
+      { x: 200, y: 60, width: 80, height: 18, kind: 'thorn-leaf' },
+    ],
+    sunDrops: [{ x: 180, y: 260, radius: 8 }],
+    thorns: [],
+    cameraY: 0,
+    feedback: {},
+  });
+
+  const problems = [];
+  const fingerprints = new Map();
+  for (const biome of Object.values(BIOMES)) {
+    const { colours } = paintProbe(scene(biome.id));
+    const declared = ['leaf', 'cracked', 'moving', 'thorn', 'sun', 'leafEdge', 'silhouette'];
+    const missing = declared.filter((token) => !colours.has(biome[token]));
+    if (missing.length) problems.push(`${biome.id} declara mas não pinta: ${missing.join(', ')}`);
+    if (!colours.has(biome.sky[0])) problems.push(`${biome.id} não usa o próprio céu`);
+    fingerprints.set(biome.id, [...colours].sort().join('|'));
+  }
+  if (new Set(fingerprints.values()).size !== fingerprints.size) {
+    problems.push('dois biomas produzem exatamente as mesmas cores em tela');
+  }
+  return {
+    ok: problems.length === 0,
+    detail: problems.length ? problems.join('; ') : `${fingerprints.size} biomas com pintura distinta e completa`,
+  };
+});
+
+check('BIOME-2', 'O fundo se move enquanto Pip sobe', () => {
+  const base = { route: { biome: 'canopy' }, player: null, platforms: [], sunDrops: [], thorns: [], feedback: {} };
+  const heights = [0, -90, -260, -640, -1180];
+  const shapes = heights.map((cameraY) => paintProbe({ ...base, cameraY }).geometry);
+  const distinct = new Set(shapes);
+
+  // Camadas distintas precisam andar a velocidades distintas, senão é rolagem,
+  // não paralaxe. Um passo curto de câmera já deve mover o fundo.
+  const movedOnShortStep = shapes[0] !== shapes[1];
+  const ok = distinct.size === heights.length && movedOnShortStep;
+  return {
+    ok,
+    detail: ok
+      ? `a silhueta de fundo é diferente em ${distinct.size} alturas distintas`
+      : `${heights.length - distinct.size + 1} alturas desenham o mesmo fundo: a paralaxe não chega à tela`,
   };
 });
 
