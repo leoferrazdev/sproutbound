@@ -3,13 +3,14 @@ import { createGameLoop } from './game/game-loop.js';
 import { bindInput, createInputState } from './input.js';
 import { stepRun } from './game/simulation.js';
 import { createCanvasRenderer } from './render/canvas-renderer.js';
-import { getVisualTier, getCurrentRoute, applyRouteResult, migrateProgress } from './game/progression.js';
-import { createObjectiveTracker, trackObjective, evaluateObjective, getRoute } from './game/campaign.js';
+import { getVisualTier, getCurrentRoute, applyRouteResult, migrateProgress, selectRoute } from './game/progression.js';
+import { createObjectiveTracker, trackObjective, evaluateObjective, getRoute, getNextRoute } from './game/campaign.js';
 import { createSafeStorage } from './storage.js';
 import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
+import { createCampaignScreen } from './ui/campaign-screen.js';
 import { createPlatformAdapter } from './platform-adapter.js';
-import { createTranslator, getPreferredLanguage } from './i18n.js';
+import { createTranslator, getPreferredLanguage, routeLabel } from './i18n.js';
 import { createAudio } from './audio.js';
 
 function getBrowserStorage(documentRef) {
@@ -71,25 +72,55 @@ export function createApp(
     onUnmute: () => audio.unmute(),
   });
   const hud = createHud(gameRoot, translator);
+  let campaign;
+  const startRoute = (nextRoute) => {
+    route = nextRoute;
+    objective = createObjectiveTracker(route);
+    input.left = false;
+    input.right = false;
+    input.pointerX = null;
+    input.active = false;
+    input.pressed = false;
+    simulation.run = createRun(route, progress);
+    hud.update(simulation.run);
+    screens.showReady();
+    campaign?.hide();
+    renderer.render(simulation.run);
+    loop.resume();
+  };
+
   const screens = createScreens(gameRoot, {
     translator,
+    onAdvance: async () => {
+      await platformAdapter.requestCommercialBreak();
+      startRoute(getNextRoute(route) ?? route);
+    },
     onRestart: async () => {
       await platformAdapter.requestCommercialBreak();
-      input.left = false;
-      input.right = false;
-      input.pointerX = null;
-      input.active = false;
-      input.pressed = false;
-      route = getCurrentRoute(progress);
-      objective = createObjectiveTracker(route);
-      simulation.run = createRun(route, progress);
-      hud.update(simulation.run);
-      hud.showNextObjective(simulation.run.nextUnlock);
+      startRoute(route);
+    },
+  });
+
+  campaign = createCampaignScreen(gameRoot, {
+    translator,
+    onSelect: (routeId) => {
+      progress = selectRoute(progress, routeId);
+      safeStorage.save(progress);
+      startRoute(getRoute(routeId) ?? route);
+    },
+    onClose: () => {
+      campaign.hide();
       screens.showReady();
-      renderer.render(simulation.run);
       loop.resume();
     },
   });
+
+  const openCampaign = () => {
+    loop.pause();
+    screens.hideAll();
+    campaign.show(progress, route.id);
+  };
+  gameRoot.querySelector('#routes-button')?.addEventListener('click', openCampaign);
   const ui = {
     update(run, events, dt = 0) {
       audio.playEvents(events);
@@ -113,7 +144,15 @@ export function createApp(
         progress = result.progress;
         safeStorage.save(progress);
         simulation.run = { ...simulation.run, visualTier: getVisualTier(progress) };
-        screens.showSummit({ ...run, objectiveMet: verdict.objectiveMet, nextRoute: result.routeUnlocked });
+        const following = getNextRoute(route);
+        screens.showSummit({
+          ...run,
+          objective,
+          objectiveMet: verdict.objectiveMet,
+          nextRouteLabel: result.routeUnlocked ? routeLabel(translator, getRoute(result.routeUnlocked)) : null,
+          isLastRoute: !following,
+        });
+        campaign.render(progress, route.id);
         hud.showObjective(translator.t('objective.summit'));
       } else if (events.includes('playerDied')) {
         void platformAdapter.stopGameplay();

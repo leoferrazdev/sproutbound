@@ -32,9 +32,12 @@
               <span>Best</span>
               <strong id="record-value">0 m</strong>
             </div>
+            <p id="route-label" class="route-label">Route 1 · Sunlit canopy</p>
+            <p id="goal-banner" class="goal-banner">Goal: Reach the top</p>
             <p id="objective" class="objective">Tap left or right to guide Pip.</p>
             <p id="solar-counter" class="sun-counter" aria-label="Collected solar drops">Solar light: 0 · Solar charge: 0/5</p>
             <p id="pause-state" class="sr-only" aria-live="assertive">Game ready</p>
+            <button id="routes-button" class="hud-button" type="button" data-action="routes">Routes</button>
           </div>
           <div id="screens" class="screens">
             <section id="ready-screen" class="screen-card" aria-label="Start of the run">
@@ -42,6 +45,25 @@
               <h1>Help Pip climb.</h1>
               <p>Tap left or right, or use ← → / A D / Q Z to guide Pip.</p>
             </section>
+            <section id="campaign-screen" class="screen-card campaign-card" aria-label="Route select" hidden>
+              <p class="eyebrow" id="campaign-eyebrow">CAMPAIGN</p>
+              <h1 id="campaign-title">Choose a route.</h1>
+              <p id="campaign-progress" class="campaign-progress" aria-live="polite">0 of 25 routes cleared</p>
+              <div id="route-list" class="route-list" role="list"></div>
+              <button id="campaign-close" class="secondary-button" type="button" data-action="campaign-close">Back to the climb</button>
+            </section>
+
+            <section id="complete-screen" class="screen-card" aria-label="Route cleared" hidden>
+              <p class="eyebrow" id="complete-eyebrow">ROUTE CLEARED</p>
+              <h1 id="complete-title">Route cleared.</h1>
+              <p id="complete-route" class="complete-route">Route 1 · Sunlit canopy</p>
+              <p id="complete-goal" class="complete-goal" aria-live="polite">Goal met</p>
+              <p id="complete-stats" class="complete-stats">Time: 0s · Drops: 0</p>
+              <p id="complete-next" class="complete-next"></p>
+              <button id="complete-advance" class="primary-button" type="button" data-action="advance">Next route</button>
+              <button id="complete-retry" class="secondary-button" type="button" data-action="restart">Try the goal again</button>
+            </section>
+
             <section id="game-over-screen" class="screen-card" aria-label="End of the run" hidden>
               <p id="ending-eyebrow" class="eyebrow">RUN OVER</p>
               <h1 id="ending-title">Pip needs another try.</h1>

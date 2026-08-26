@@ -53,6 +53,47 @@ const MESSAGES = {
       message: 'Summit Crown unlocked.',
       reward: 'Reward: Summit Crown',
     },
+    campaign: {
+      label: 'Route select',
+      eyebrow: 'CAMPAIGN',
+      title: 'Choose a route.',
+      progress: '{cleared} of {total} routes cleared · {stars} stars',
+      locked: 'Locked',
+      cleared: 'Cleared',
+      play: 'Play',
+      best: 'Best {seconds}s',
+      open: 'Routes',
+      close: 'Back to the climb',
+      routeName: 'Route {order}',
+    },
+    biome: {
+      canopy: 'Sunlit canopy',
+      dusk: 'Dusk hollow',
+      crystal: 'Crystal shelf',
+      storm: 'Storm reach',
+      summit: 'Golden summit',
+    },
+    goal: {
+      reach: 'Reach the top',
+      collect: 'Collect {value} solar drops',
+      flawless: 'Reach the top without touching a thorn',
+      swift: 'Reach the top in under {value}s',
+      frugal: 'Reach the top without spending the shield',
+      progress: '{current}/{target}',
+      met: 'Goal met',
+      missed: 'Goal missed',
+      banner: 'Goal: {text}',
+    },
+    complete: {
+      eyebrow: 'ROUTE CLEARED',
+      title: 'Route cleared.',
+      time: 'Time: {seconds}s',
+      drops: 'Drops: {value}',
+      nextRoute: 'Next route unlocked: {label}',
+      lastRoute: 'You cleared the whole campaign.',
+      retry: 'Try the goal again',
+      advance: 'Next route',
+    },
     milestone: {
       bud: 'Two-leaf sprout',
       bloom: 'Blooming Pip',
@@ -114,6 +155,47 @@ const MESSAGES = {
       message: 'Coroa do cume desbloqueada.',
       reward: 'Recompensa: Coroa do cume',
     },
+    campaign: {
+      label: 'Seleção de rota',
+      eyebrow: 'CAMPANHA',
+      title: 'Escolha uma rota.',
+      progress: '{cleared} de {total} rotas concluídas · {stars} estrelas',
+      locked: 'Bloqueada',
+      cleared: 'Concluída',
+      play: 'Jogar',
+      best: 'Melhor {seconds}s',
+      open: 'Rotas',
+      close: 'Voltar à subida',
+      routeName: 'Rota {order}',
+    },
+    biome: {
+      canopy: 'Copa ensolarada',
+      dusk: 'Vale do entardecer',
+      crystal: 'Falésia de cristal',
+      storm: 'Céu de tempestade',
+      summit: 'Cume dourado',
+    },
+    goal: {
+      reach: 'Alcance o topo',
+      collect: 'Colete {value} gotas solares',
+      flawless: 'Alcance o topo sem tocar em espinho',
+      swift: 'Alcance o topo em menos de {value}s',
+      frugal: 'Alcance o topo sem gastar o escudo',
+      progress: '{current}/{target}',
+      met: 'Objetivo cumprido',
+      missed: 'Objetivo não cumprido',
+      banner: 'Objetivo: {text}',
+    },
+    complete: {
+      eyebrow: 'ROTA CONCLUÍDA',
+      title: 'Rota concluída.',
+      time: 'Tempo: {seconds}s',
+      drops: 'Gotas: {value}',
+      nextRoute: 'Nova rota liberada: {label}',
+      lastRoute: 'Você concluiu a campanha inteira.',
+      retry: 'Tentar o objetivo de novo',
+      advance: 'Próxima rota',
+    },
     milestone: {
       bud: 'Broto com duas folhas',
       bloom: 'Pip florescente',
@@ -154,4 +236,19 @@ export function createTranslator(language = 'en') {
 
 export function milestoneLabel(translator, milestone) {
   return milestone ? translator.t(`milestone.${milestone.id}`) : '';
+}
+
+export function biomeLabel(translator, biomeId) {
+  return translator.t(`biome.${biomeId}`);
+}
+
+// Texto do objetivo da rota, já com o valor aplicado.
+export function objectiveText(translator, objective) {
+  const type = objective?.type ?? 'reach';
+  return translator.t(`goal.${type}`, { value: objective?.value ?? 0 });
+}
+
+export function routeLabel(translator, route) {
+  if (!route) return '';
+  return `${translator.t('campaign.routeName', { order: route.order })} · ${biomeLabel(translator, route.biome)}`;
 }

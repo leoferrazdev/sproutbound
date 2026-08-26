@@ -172,9 +172,15 @@ canvas {
 
 .screens {
   display: grid;
+  /* linha limitada à altura do palco: com linha auto a área cresce para caber o
+     conteúdo e o max-height em porcentagem do filho passa a resolver contra ela,
+     nunca contra o palco — foi o que fez o painel de rotas virar 3138 px. */
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
   padding: 24px;
 }
+
+.screens > .campaign-card { align-self: stretch; justify-self: center; }
 
 .screen-card {
   width: min(100%, 300px);
@@ -252,4 +258,178 @@ button:focus-visible {
   .desktop-guide {
     display: block;
   }
+}
+
+/* Campanha: seleção de rota, objetivo visível e conclusão. */
+.route-label {
+  margin: 0;
+  color: rgba(232, 244, 236, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.goal-banner {
+  margin: 2px 0 0;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 209, 102, 0.34);
+  border-radius: 999px;
+  background: rgba(12, 26, 20, 0.62);
+  color: #ffe9a8;
+  font-size: 12px;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.goal-banner[data-failed="true"] {
+  border-color: rgba(255, 138, 128, 0.5);
+  background: rgba(52, 18, 18, 0.66);
+  color: #ffb3ab;
+}
+
+#routes-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 76px;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+
+.campaign-card {
+  /* O painel precisa caber no palco e ceder a altura restante à lista; sem isto
+     ele cresce para conter as 25 rotas e a rolagem interna nunca acontece. */
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  max-height: calc(100% - 32px);
+  align-content: stretch;
+  gap: 10px;
+  padding: 18px 14px;
+  text-align: left;
+}
+
+.campaign-progress {
+  margin: 0;
+  color: rgba(232, 244, 236, 0.74);
+  font-size: 13px;
+}
+
+.route-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding-right: 4px;
+}
+
+.route-group {
+  margin: 10px 0 2px;
+  color: var(--biome-accent, #9fe8b4);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.route-group:first-child { margin-top: 0; }
+
+.route-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 90px;
+  padding: 10px 12px;
+  border: 1px solid rgba(232, 244, 236, 0.16);
+  border-left: 4px solid var(--biome-accent, #9fe8b4);
+  border-radius: 12px;
+  background: rgba(10, 24, 19, 0.72);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 160ms ease-out, background 160ms ease-out, transform 120ms ease-out;
+}
+
+.route-card:not(:disabled):hover {
+  border-color: var(--biome-accent, #9fe8b4);
+  background: rgba(16, 38, 29, 0.86);
+}
+
+.route-card:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.route-card:not(:disabled):active { transform: scale(0.98); }
+
+.route-order {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--biome-accent, #9fe8b4);
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.route-body { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.route-name { font-size: 13px; font-weight: 700; }
+.route-goal {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  /* duas linhas sempre reservadas: objetivo curto e longo geram o mesmo card */
+  min-height: 2.6em;
+  color: rgba(232, 244, 236, 0.66);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.route-best { min-height: 1.2em; color: rgba(255, 233, 168, 0.82); font-size: 12px; font-weight: 700; }
+
+.route-badge {
+  margin-left: auto;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  font-size: 15px;
+}
+
+.route-badge[data-kind="star"] { background: rgba(255, 209, 102, 0.18); color: #ffd166; }
+.route-badge[data-kind="cleared"] { background: rgba(126, 224, 154, 0.16); color: #7ee09a; }
+
+.route-card[data-state="locked"] {
+  cursor: default;
+  border-left-color: rgba(232, 244, 236, 0.2);
+  background: rgba(8, 16, 13, 0.55);
+}
+
+.route-card[data-state="locked"] .route-name,
+.route-card[data-state="locked"] .route-order { color: rgba(232, 244, 236, 0.42); }
+
+.route-card[data-current="true"] {
+  border-color: var(--biome-accent, #9fe8b4);
+  box-shadow: 0 0 0 1px var(--biome-accent, #9fe8b4);
+}
+
+.complete-route { margin: 0; color: rgba(232, 244, 236, 0.74); font-size: 13px; font-weight: 700; }
+.complete-goal { margin: 0; font-size: 13px; font-weight: 700; color: #ffb3ab; }
+.complete-goal[data-met="true"] { color: #ffd166; }
+.complete-stats { margin: 0; color: rgba(232, 244, 236, 0.78); font-size: 13px; font-variant-numeric: tabular-nums; }
+.complete-next { margin: 0; min-height: 1.3em; color: #9fe8b4; font-size: 13px; font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .route-card { transition: none; }
+  .route-card:not(:disabled):active { transform: none; }
 }

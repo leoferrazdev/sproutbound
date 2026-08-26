@@ -1,4 +1,4 @@
-import { createTranslator, milestoneLabel } from '../i18n.js';
+import { createTranslator, milestoneLabel, objectiveText, routeLabel } from '../i18n.js';
 
 export function createHud(root, translator = createTranslator()) {
   const heightValue = root.querySelector('#height-value');
@@ -6,6 +6,8 @@ export function createHud(root, translator = createTranslator()) {
   const objective = root.querySelector('#objective');
   const sunCounter = root.querySelector('#solar-counter');
   const pauseState = root.querySelector('#pause-state');
+  const routeLabelEl = root.querySelector('#route-label');
+  const goalBanner = root.querySelector('#goal-banner');
   const statLabels = root.querySelectorAll('.hud-stat span');
 
   if (statLabels[0]) statLabels[0].textContent = translator.t('hud.height');
@@ -27,6 +29,26 @@ export function createHud(root, translator = createTranslator()) {
       sunCounter.textContent = solar.shieldAvailable
         ? translator.t('hud.shieldReady')
         : `${translator.t('hud.solarValue', { value: Math.max(0, solar.collected ?? 0) })} · ${translator.t('hud.solarCharge', { value: solar.charge ?? 0, max: 5 })}`;
+    }
+    // O objetivo da rota fica visível durante a partida, com progresso quando ele
+    // é contável. Objetivo invisível é o mesmo defeito que a auditoria apontou.
+    if (routeLabelEl) routeLabelEl.textContent = run.route ? routeLabel(translator, run.route) : '';
+    if (goalBanner && run.route) {
+      const objective = run.route.objective ?? { type: 'reach' };
+      const tracker = run.objective ?? {};
+      let text = objectiveText(translator, objective);
+      if (objective.type === 'collect' && Number.isFinite(objective.value)) {
+        text += ` · ${translator.t('goal.progress', { current: tracker.drops ?? 0, target: objective.value })}`;
+      }
+      if (objective.type === 'swift' && Number.isFinite(objective.value)) {
+        text += ` · ${Math.max(0, objective.value - (tracker.seconds ?? 0)).toFixed(0)}s`;
+      }
+      goalBanner.textContent = translator.t('goal.banner', { text });
+      goalBanner.dataset.failed = String(
+        (objective.type === 'flawless' && (tracker.thornHits ?? 0) > 0)
+        || (objective.type === 'frugal' && Boolean(tracker.shieldUsed))
+        || (objective.type === 'swift' && Number.isFinite(objective.value) && (tracker.seconds ?? 0) > objective.value),
+      );
     }
     if (run.state === 'playing') pauseState.textContent = translator.t('hud.playing');
     if (run.state === 'ready') pauseState.textContent = translator.t('hud.ready');
