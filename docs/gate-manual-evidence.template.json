@@ -4,5 +4,5 @@
   "console-clean-10min": { "pass": false, "date": "", "browser": "", "commit": "", "notes": "Sessão de 10 min sem erro nem aviso relevante" },
   "fps-stable-10min": { "pass": false, "date": "", "browser": "", "commit": "", "notes": "60 fps sustentados, sem crescimento de memória entre partidas" },
   "desktop-occupancy": { "pass": false, "date": "", "browser": "", "commit": "", "notes": "Sem faixa vazia em 1280x720 e 1920x1080" },
-  "playtest-five-strangers": { "pass": false, "date": "", "browser": "", "commit": "", "notes": "5 pessoas fora do projeto; registrar quantas passaram de 60s e quantas iniciaram uma 3a partida por vontade propria" }
+  "_playtest-five-strangers": { "_revogado": "2026-08-26; item de autoridade de desempenho, revogado por escrito. Nao reintroduzir sem revogar a revogacao." }
 }

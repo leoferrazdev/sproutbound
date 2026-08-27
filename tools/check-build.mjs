@@ -2,7 +2,7 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join, relative, resolve } from 'node:path';
 
-const ignoredDirectories = new Set(['.git', 'node_modules', 'tests', 'media', 'submission']);
+const ignoredDirectories = new Set(['.git', 'node_modules', 'tests', 'media', 'submission', 'archive']);
 const releaseExtensions = new Set(['.css', '.html', '.js', '.json', '.svg']);
 const maxBytes = 8 * 1024 * 1024;
 

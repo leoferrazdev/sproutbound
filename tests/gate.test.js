@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
 import { runGate, THRESHOLDS, playToExhaustion, playCampaign, worldSignature } from '../tools/check-gate.mjs';
 import { getRoutes } from '../src/game/campaign.js';
@@ -24,7 +25,26 @@ test('o gate exige evidência manual e nunca a presume', () => {
   assert.ok(manual, 'o item de evidência manual precisa existir');
   assert.deepEqual(
     THRESHOLDS.manualItems,
-    ['preview-tool', 'console-clean-10min', 'fps-stable-10min', 'desktop-occupancy', 'playtest-five-strangers'],
+    ['preview-tool', 'console-clean-10min', 'fps-stable-10min', 'desktop-occupancy'],
+  );
+  // `playtest-five-strangers` foi revogado por escrito em 2026-08-26. A revogação é uma
+  // decisão registrada, não um esquecimento: se o item voltar, alguém precisa revogar a
+  // revogação e este teste é onde isso fica visível.
+  assert.ok(
+    !THRESHOLDS.manualItems.includes('playtest-five-strangers'),
+    'item revogado reintroduzido sem revogar a revogação',
+  );
+});
+
+test('a evidência manual nunca registra um item que o gate não cobra', () => {
+  // O inverso do teste acima. Um item marcado no arquivo e ausente da lista passaria
+  // despercebido e daria falsa sensação de cobertura.
+  const bruto = fs.readFileSync(new URL('../docs/gate-manual-evidence.json', import.meta.url), 'utf8');
+  const registrados = Object.keys(JSON.parse(bruto)).filter((k) => !k.startsWith('_'));
+  assert.deepEqual(
+    registrados.sort(),
+    [...THRESHOLDS.manualItems].sort(),
+    'gate-manual-evidence.json e THRESHOLDS.manualItems divergiram',
   );
 });
 

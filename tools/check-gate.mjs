@@ -40,12 +40,26 @@ export const THRESHOLDS = Object.freeze({
     { id: 'square', width: 800, height: 800 },
   ],
   video: { minSeconds: 15, maxSeconds: 20, minLandscapeWidth: 1920, minPortraitWidth: 1080, maxBytes: 50 * 1024 * 1024 },
+  // `playtest-five-strangers` foi REVOGADO por escrito em 2026-08-26. Não foi executado e
+  // não será. A revogação é registrada em
+  // cofre-games/03 - Projetos/Sproutbound/04 - Validação/Revogação do playtest externo.md
+  //
+  // Razão: o playtest pertence à autoridade de DESEMPENHO, não à de aprovação. Nenhuma
+  // exigência publicada da plataforma pede teste com pessoas de fora. Abrir mão dele não
+  // muda a chance de aprovação; muda de onde vêm os primeiros números de R.E.T.E.R. —
+  // do Basic Launch, com jogadores reais, em vez de cinco pessoas antes.
+  //
+  // Custo aceito: um problema de clareza ou retenção só aparece depois de gastar os
+  // primeiros plays, e corrigir depois custa mais que corrigir antes.
+  //
+  // O que NÃO se pode fazer: marcá-lo como aprovado sem executar. Revogar é uma decisão
+  // registrada; marcar sem executar é a falha que causou a segunda recusa. Um item de
+  // autoridade de APROVAÇÃO não é revogável desta forma — o revisor cobra de qualquer jeito.
   manualItems: [
     'preview-tool',
     'console-clean-10min',
     'fps-stable-10min',
     'desktop-occupancy',
-    'playtest-five-strangers',
   ],
 });
 
@@ -579,6 +593,51 @@ check('PORTAL-1', 'Sem branding de outro portal no runtime', () => {
   const hits = ['poki', 'gamedistribution', 'gd_options', 'gamepix', 'kongregate', 'armorgames']
     .filter((portal) => new RegExp(portal, 'i').test(runtime));
   return { ok: hits.length === 0, detail: hits.length ? `portais citados no runtime: ${hits.join(', ')}` : 'runtime neutro' };
+});
+
+// O gate nasceu para impedir submissão com item em aberto, e tinha um buraco: validava o
+// código-fonte e a evidência manual contra o HEAD, mas nunca olhava o que estava dentro de
+// submission/. Os pacotes ficaram 15 commits atrás — eram o build recusado — e nada
+// reclamava. Se os itens manuais tivessem sido marcados, o gate autorizaria enviar
+// exatamente o artefato que causou a recusa.
+//
+// Compara por igualdade estrita, como o MANUAL: um pacote "quase atual" é um pacote errado.
+check('PKG-1', 'Todo pacote de submissão foi gerado do commit atual', () => {
+  const commit = currentCommit();
+  const dir = path.join(ROOT, 'submission');
+  if (!fs.existsSync(dir)) return { ok: false, detail: 'submission/ ausente; rode npm run build:all' };
+
+  const manifests = [];
+  (function walk(current) {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name === 'build-manifest.json') manifests.push(full);
+    }
+  })(dir);
+
+  if (manifests.length === 0) return { ok: false, detail: 'nenhum build-manifest.json em submission/; rode npm run build:all' };
+  if (!commit) return { ok: false, detail: 'git indisponível; não há como provar a origem dos pacotes' };
+
+  const problems = [];
+  for (const file of manifests) {
+    const relative = path.relative(ROOT, file).replace(/\\/g, '/');
+    let manifest;
+    try { manifest = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { problems.push(`${relative}: ilegível`); continue; }
+    if (!manifest.sourceCommit) { problems.push(`${relative}: sem sourceCommit`); continue; }
+    if (manifest.sourceCommit !== commit) {
+      let atras = '';
+      try {
+        const n = execSync(`git rev-list --count ${manifest.sourceCommit}..HEAD`, { cwd: ROOT, encoding: 'utf8' }).trim();
+        atras = ` (${n} commits atrás)`;
+      } catch { /* commit desconhecido pelo repositório */ }
+      problems.push(`${relative}: gerado de ${manifest.sourceCommit.slice(0, 7)}${atras}, atual é ${commit.slice(0, 7)}`);
+    }
+  }
+  return {
+    ok: problems.length === 0,
+    detail: problems.length ? problems.join('; ') : `${manifests.length} pacotes gerados do commit atual`,
+  };
 });
 
 check('MANUAL', 'Evidência manual registrada para o commit atual', () => {
