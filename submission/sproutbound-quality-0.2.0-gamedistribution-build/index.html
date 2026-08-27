@@ -9,31 +9,36 @@
   </head>
   <body>
     <main id="game" aria-label="Sproutbound">
+      <canvas id="backdrop-canvas" class="backdrop" aria-hidden="true"></canvas>
       <div class="game-layout">
-        <aside id="desktop-guide" class="desktop-guide" aria-label="Run guide">
-          <p class="eyebrow">RUN GUIDE</p>
-          <h2>Reach the summit.</h2>
-          <p>Guide Pip from leaf to leaf and collect solar drops on the way up.</p>
-          <ul>
-            <li>First 30 m: safe rhythm</li>
-            <li>5 drops: solar shield</li>
-            <li>249 m: summit reward</li>
-          </ul>
-          <p class="guide-note">One touch starts the run. Hold left or right to steer.</p>
-        </aside>
         <section class="stage-shell" aria-label="Game area">
-          <canvas id="game-canvas" tabindex="0" aria-describedby="ready-screen desktop-guide" aria-label="Sproutbound game"></canvas>
+          <canvas id="game-canvas" tabindex="0" aria-describedby="ready-screen goal-banner" aria-label="Sproutbound game"></canvas>
           <div id="hud" class="hud" aria-live="polite">
-            <div class="hud-stat" aria-label="Current height">
-              <span>Height</span>
-              <strong id="height-value">0 m</strong>
+            <div class="hud-row hud-row-top">
+              <div class="hud-stats">
+                <div class="hud-stat hud-chip" aria-label="Current height">
+                  <span>Height</span>
+                  <strong id="height-value">0 m</strong>
+                </div>
+                <div class="hud-stat hud-chip" aria-label="Best height">
+                  <span>Best</span>
+                  <strong id="record-value">0 m</strong>
+                </div>
+              </div>
+              <div class="hud-actions">
+                <button id="sound-button" class="hud-button" type="button" data-action="sound" aria-pressed="false">Sound on</button>
+                <button id="routes-button" class="hud-button" type="button" data-action="routes">Routes</button>
+                <button id="pause-button" class="hud-button" type="button" data-action="pause">Pause</button>
+              </div>
             </div>
-            <div class="hud-stat" aria-label="Best height">
-              <span>Best</span>
-              <strong id="record-value">0 m</strong>
+            <div class="hud-row hud-row-context">
+              <p id="route-label" class="route-label">Route 1 · Sunlit canopy</p>
+              <p id="goal-banner" class="goal-banner hud-chip">Goal: Reach the top</p>
             </div>
-            <p id="objective" class="objective">Tap left or right to guide Pip.</p>
-            <p id="solar-counter" class="sun-counter" aria-label="Collected solar drops">Solar light: 0 · Solar charge: 0/5</p>
+            <div class="hud-row hud-row-foot">
+              <p id="objective" class="objective hud-chip">Tap left or right to guide Pip.</p>
+              <p id="solar-counter" class="sun-counter hud-chip" aria-label="Collected solar drops">Solar light: 0 · Solar charge: 0/5</p>
+            </div>
             <p id="pause-state" class="sr-only" aria-live="assertive">Game ready</p>
           </div>
           <div id="screens" class="screens">
@@ -42,6 +47,34 @@
               <h1>Help Pip climb.</h1>
               <p>Tap left or right, or use ← → / A D / Q Z to guide Pip.</p>
             </section>
+            <section id="pause-screen" class="screen-card" aria-label="Paused" hidden>
+              <p class="eyebrow" id="pause-eyebrow">PAUSED</p>
+              <h1 id="pause-title">Take a breath.</h1>
+              <p id="pause-route" class="complete-route"></p>
+              <button id="pause-resume" class="primary-button" type="button" data-action="resume">Resume</button>
+              <button id="pause-routes" class="secondary-button" type="button" data-action="routes">Routes</button>
+              <button id="pause-sound" class="secondary-button" type="button" data-action="sound">Sound on</button>
+            </section>
+
+            <section id="campaign-screen" class="screen-card campaign-card" aria-label="Route select" hidden>
+              <p class="eyebrow" id="campaign-eyebrow">CAMPAIGN</p>
+              <h1 id="campaign-title">Choose a route.</h1>
+              <p id="campaign-progress" class="campaign-progress" aria-live="polite">0 of 25 routes cleared</p>
+              <div id="route-list" class="route-list" role="list"></div>
+              <button id="campaign-close" class="secondary-button" type="button" data-action="campaign-close">Back to the climb</button>
+            </section>
+
+            <section id="complete-screen" class="screen-card" aria-label="Route cleared" hidden>
+              <p class="eyebrow" id="complete-eyebrow">ROUTE CLEARED</p>
+              <h1 id="complete-title">Route cleared.</h1>
+              <p id="complete-route" class="complete-route">Route 1 · Sunlit canopy</p>
+              <p id="complete-goal" class="complete-goal" aria-live="polite">Goal met</p>
+              <p id="complete-stats" class="complete-stats">Time: 0s · Drops: 0</p>
+              <p id="complete-next" class="complete-next"></p>
+              <button id="complete-advance" class="primary-button" type="button" data-action="advance">Next route</button>
+              <button id="complete-retry" class="secondary-button" type="button" data-action="restart">Try the goal again</button>
+            </section>
+
             <section id="game-over-screen" class="screen-card" aria-label="End of the run" hidden>
               <p id="ending-eyebrow" class="eyebrow">RUN OVER</p>
               <h1 id="ending-title">Pip needs another try.</h1>

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "game": "sproutbound",
+  "version": "0.2.0",
+  "platform": "gamedistribution",
+  "entrypoint": "src/main-gamedistribution.js",
+  "externalUrls": [
+    "https://html5.api.gamedistribution.com/main.min.js"
+  ],
+  "sourceCommit": "c5dfcb04e50f352cee126d16e2f717fb2ff003a6",
+  "files": [
+    "build-manifest.json",
+    "index.html",
+    "src/app.js",
+    "src/audio.js",
+    "src/game/feedback.js",
+    "src/game/game-loop.js",
+    "src/game/model.js",
+    "src/game/player.js",
+    "src/game/progression.js",
+    "src/game/simulation.js",
+    "src/game/world.js",
+    "src/i18n.js",
+    "src/input.js",
+    "src/main-gamedistribution.js",
+    "src/main.js",
+    "src/platform-adapter.js",
+    "src/platform-adapters/gamedistribution.js",
+    "src/render/canvas-renderer.js",
+    "src/storage.js",
+    "src/ui/hud.js",
+    "src/ui/screens.js",
+    "styles.css"
+  ]
+}
