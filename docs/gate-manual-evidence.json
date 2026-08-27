@@ -1,0 +1,35 @@
+{
+  "_comment": "Preenchido a partir da verificação de 2026-08-26. Item não executado é false com o motivo em notes. Marcar sem executar é a falha que causou a segunda recusa.",
+  "preview-tool": {
+    "pass": false,
+    "date": "2026-08-26",
+    "browser": "Chrome 151.0.0.0; CrazyGames Preview Tool",
+    "commit": "33ff5604c2a9105f225f778d36c8e2046ac57d07",
+    "notes": "Acesso autenticado, 0 warnings, logs gameFinishedLoading e gameLoaded, gameplay alcançado. INVÁLIDO como evidência: o Preview exibiu 'This build has already been sent to QA' e 'Updating QA checks is disabled in Preview', ou seja, carregou um build antigo já enviado, não o pacote local. O pacote local também estava em c5dfcb0, 15 commits atrás. Repetir após subir o pacote regenerado do commit atual."
+  },
+  "console-clean-10min": {
+    "pass": false,
+    "date": "2026-08-26",
+    "browser": "Chrome 151.0.0.0; Edge indisponível para automação",
+    "commit": "33ff5604c2a9105f225f778d36c8e2046ac57d07",
+    "notes": "Chrome: 607178 ms contínuos, 0 erros e 0 avisos; localStorage limpo; rota 1 concluída em 60,5 s, rota 2 iniciada; pausa/despausa, mute e menu de rotas exercitados. Duas lacunas de cobertura: Edge não foi medido, e nenhum game over ocorreu, então o caminho de morte não foi exercitado no console."
+  },
+  "fps-stable-10min": {
+    "pass": false,
+    "date": "2026-08-26",
+    "browser": "Chrome 151.0.0.0",
+    "commit": "33ff5604c2a9105f225f778d36c8e2046ac57d07",
+    "notes": "Medição inválida, não é resultado do jogo. Amostra de 7,193 s registrou 1,419 / 0,984 / 1 / 5,661 / 1 / 1 fps, incompatível com a mesma sessão ter concluído uma rota em 60,5 s: o instrumento mediu requestAnimationFrame estrangulado pela automação. Sem sessão de 10 min, sem mínimo, mediana ou quedas abaixo de 55. Heap inicial usedSize 8518244 B, totalSize 9986048 B, leitura única; HeapProfiler.collectGarbage indisponível. Refazer com tools/measure-runtime.html em aba visível."
+  },
+  "desktop-occupancy": {
+    "pass": true,
+    "date": "2026-08-26",
+    "browser": "Chrome 151.0.0.0",
+    "commit": "33ff5604c2a9105f225f778d36c8e2046ac57d07",
+    "notes": "1280x720: jogo [538,718], fundo [1280,720], ocupacaoLargura 0.420, fundoCobreViewport true, buffer [538,718]. 1920x1080: jogo [808,1078], fundo [1920,1080], ocupacaoLargura 0.421, fundoCobreViewport true, buffer [808,1078]. Razão do palco 0,749 e 0,750, coerente com STAGE_RATIO 0,75. Laterais mostram camadas de vegetação, sem faixa de cor morta."
+  },
+  "_revogado": {
+    "playtest-five-strangers": "Revogado por escrito em 2026-08-26. Ver cofre: Revogação do playtest externo. Mantido aqui como registro; o gate não o consulta mais."
+  },
+  "_revogado_detalhe": "Não executado. Decidido em 2026-08-26 não realizar teste com pessoas. Item pendente de revogação por escrito: enquanto estiver em THRESHOLDS.manualItems e não executado, o gate não sai com código 0. Marcar como aprovado sem executar é a falha que causou a segunda recusa."
+}

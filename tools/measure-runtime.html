@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Sproutbound — medidor de fps e memória</title>
+<style>
+  :root { color-scheme: dark; --fundo: #071624; --tinta: #e8f4e0; --linha: #1d3a4f; --ok: #a8e063; --erro: #ff8a7a; --nota: #ffd166; }
+  * { box-sizing: border-box; }
+  body { margin: 0; display: grid; grid-template-columns: 480px 1fr; gap: 16px; padding: 16px;
+         background: var(--fundo); color: var(--tinta); font: 14px/1.5 system-ui, sans-serif; height: 100vh; }
+  iframe { width: 480px; height: 640px; border: 1px solid var(--linha); border-radius: 6px; background: #000; }
+  .painel { display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow-y: auto; }
+  h1 { font-size: 16px; margin: 0; }
+  p { margin: 0; }
+  .aviso { border-left: 3px solid var(--nota); padding-left: 10px; color: #cfe6d6; }
+  button { font: inherit; padding: 10px 16px; border-radius: 6px; border: 1px solid var(--linha);
+           background: #0d2436; color: var(--tinta); cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  #estado { font-variant-numeric: tabular-nums; }
+  #saida { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 12px;
+           border: 1px solid var(--linha); border-radius: 6px; padding: 10px; min-height: 120px; }
+  .ok { color: var(--ok); } .erro { color: var(--erro); }
+</style>
+</head>
+<body>
+<iframe id="jogo" src="../index.html" title="Sproutbound"></iframe>
+<div class="painel">
+  <h1>Medidor de fps e memória — item <code>fps-stable-10min</code></h1>
+
+  <p class="aviso">
+    Mantenha esta aba <strong>visível e em primeiro plano</strong> durante os 10 minutos.
+    Jogue dentro do quadro à esquerda: várias rotas, morra pelo menos uma vez, pause e despause.
+  </p>
+
+  <p class="aviso">
+    Este medidor se recusa a reportar uma leitura que não possa sustentar. A tentativa anterior
+    devolveu 1 fps para uma sessão que concluiu uma rota em 60,5 s — as duas coisas não cabem
+    juntas, e o que estava sendo medido era <code>requestAnimationFrame</code> estrangulado, não
+    o jogo. Se aparecer <strong>MEDIÇÃO INVÁLIDA</strong>, registre o item como reprovado com o
+    motivo exibido; não contorne a guarda.
+  </p>
+
+  <button id="iniciar">Iniciar medição de 10 minutos</button>
+  <div id="estado">parado</div>
+  <div id="saida"></div>
+</div>
+
+<script>
+// Sem console.log: a saída é a página. tools/check-build.mjs proíbe console.log em toda a
+// árvore varrida, e a regra existe para que nada de diagnóstico vaze para um build.
+(() => {
+  const DURACAO_MS = 10 * 60 * 1000;
+  const AMOSTRA_HEAP_MS = 30 * 1000;
+
+  const quadro = document.getElementById('jogo');
+  const botao = document.getElementById('iniciar');
+  const estado = document.getElementById('estado');
+  const saida = document.getElementById('saida');
+
+  const escreve = (texto, classe = '') => { saida.className = classe; saida.textContent = texto; };
+
+  // Tendência em vez de dois pontos. Comparar duas leituras avulsas mede lixo ainda não
+  // coletado; a inclinação sobre a sessão mede crescimento.
+  function inclinacaoBytesPorMinuto(pontos) {
+    if (pontos.length < 4) return null;
+    const usar = pontos.slice(Math.floor(pontos.length / 3)); // descarta o aquecimento
+    const n = usar.length;
+    const mediaT = usar.reduce((s, p) => s + p.t, 0) / n;
+    const mediaY = usar.reduce((s, p) => s + p.usado, 0) / n;
+    let num = 0, den = 0;
+    for (const p of usar) { num += (p.t - mediaT) * (p.usado - mediaY); den += (p.t - mediaT) ** 2; }
+    return den === 0 ? null : (num / den) * 60000;
+  }
+
+  botao.addEventListener('click', () => {
+    const janela = quadro.contentWindow;
+    if (!janela) { escreve('O jogo não carregou no quadro. Sirva o projeto por http:// e recarregue.', 'erro'); return; }
+    if (document.hidden) { escreve('Aba oculta. Traga para primeiro plano.', 'erro'); return; }
+
+    botao.disabled = true;
+    const fpsPorSegundo = [];
+    const heap = [];
+    let quadros = 0;
+    const inicio = janela.performance.now();
+    let inicioBalde = inicio;
+    let ficouOculta = false;
+
+    const aoTrocar = () => { if (document.hidden) ficouOculta = true; };
+    document.addEventListener('visibilitychange', aoTrocar);
+
+    const memoria = () => janela.performance.memory ?? performance.memory ?? null;
+    const amostraHeap = () => {
+      const m = memoria();
+      if (m) heap.push({ t: Math.round(janela.performance.now() - inicio), usado: m.usedJSHeapSize });
+    };
+    amostraHeap();
+    const timer = setInterval(amostraHeap, AMOSTRA_HEAP_MS);
+
+    function tick(agora) {
+      quadros += 1;
+      if (agora - inicioBalde >= 1000) {
+        fpsPorSegundo.push(quadros * 1000 / (agora - inicioBalde));
+        quadros = 0;
+        inicioBalde = agora;
+      }
+      const decorrido = agora - inicio;
+      estado.textContent = `medindo… ${(decorrido / 1000).toFixed(0)}s de 600s · ${fpsPorSegundo.length} amostras`;
+      if (decorrido >= DURACAO_MS) return finalizar();
+      janela.requestAnimationFrame(tick);
+    }
+
+    function finalizar() {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', aoTrocar);
+      amostraHeap();
+      botao.disabled = false;
+      estado.textContent = 'concluído';
+
+      const decorridoS = (janela.performance.now() - inicio) / 1000;
+      const ordenado = [...fpsPorSegundo].sort((a, b) => a - b);
+      const minimo = ordenado[0] ?? 0;
+      const mediana = ordenado[Math.floor(ordenado.length / 2)] ?? 0;
+      const maximo = ordenado.at(-1) ?? 0;
+      const quedas = fpsPorSegundo.filter((f) => f < 55).length;
+      const inclinacao = inclinacaoBytesPorMinuto(heap);
+
+      // Cada guarda responde "esta leitura pode ser confiada?", não "o jogo passou?".
+      const invalido = [];
+      if (ficouOculta) invalido.push('a aba ficou oculta durante a medição');
+      if (decorridoS < 570) invalido.push(`sessão de ${decorridoS.toFixed(0)}s, exigido 600s`);
+      if (fpsPorSegundo.length < 20) invalido.push(`apenas ${fpsPorSegundo.length} amostras de fps`);
+      if (maximo < 50) invalido.push(`fps máximo ${maximo.toFixed(1)}: requestAnimationFrame estrangulado, isto não é o desempenho do jogo`);
+      if (!memoria()) invalido.push('performance.memory indisponível; rode no Chrome ou no Edge');
+
+      if (invalido.length) {
+        escreve(`MEDIÇÃO INVÁLIDA — não registre este resultado no gate.\n\n`
+          + invalido.map((m) => `  - ${m}`).join('\n')
+          + `\n\nRegistre o item como pass: false com o motivo acima.`, 'erro');
+        return;
+      }
+
+      const aprovado = minimo >= 55 && quedas <= 3 && inclinacao !== null && inclinacao < 512 * 1024;
+      const notes = `Sessão de ${decorridoS.toFixed(0)}s em aba visível. fps mínimo ${minimo.toFixed(1)}, mediana `
+        + `${mediana.toFixed(1)}, máximo ${maximo.toFixed(1)}, ${quedas} segundos abaixo de 55 fps de `
+        + `${fpsPorSegundo.length} amostras. Heap: ${heap.length} leituras, de `
+        + `${(heap[0].usado / 1048576).toFixed(2)} MB a ${(heap.at(-1).usado / 1048576).toFixed(2)} MB, `
+        + `tendência ${(inclinacao / 1048576).toFixed(3)} MB/min pela regressão sobre os dois terços finais.`;
+
+      escreve(`${aprovado ? 'APROVADO' : 'REPROVADO'}\n\n${notes}\n\n`
+        + JSON.stringify({
+            'fps-stable-10min': {
+              pass: aprovado,
+              date: new Date().toISOString().slice(0, 10),
+              browser: navigator.userAgent,
+              commit: 'PREENCHER com git rev-parse HEAD, 40 caracteres',
+              notes,
+            },
+          }, null, 2), aprovado ? 'ok' : 'erro');
+    }
+
+    escreve('Medindo. Jogue no quadro à esquerda e não troque de aba.');
+    janela.requestAnimationFrame(tick);
+  });
+})();
+</script>
+</body>
+</html>
