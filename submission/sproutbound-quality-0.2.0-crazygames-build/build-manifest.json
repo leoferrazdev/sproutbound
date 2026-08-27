@@ -5,7 +5,7 @@
   "platform": "crazygames",
   "entrypoint": "src/main.js",
   "externalUrls": [],
-  "sourceCommit": "33ff5604c2a9105f225f778d36c8e2046ac57d07",
+  "sourceCommit": "6b5fd95ac3b578d135785fcc67d999a27b1835f4",
   "files": [
     "build-manifest.json",
     "index.html",

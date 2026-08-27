@@ -601,8 +601,16 @@ check('PORTAL-1', 'Sem branding de outro portal no runtime', () => {
 // reclamava. Se os itens manuais tivessem sido marcados, o gate autorizaria enviar
 // exatamente o artefato que causou a recusa.
 //
-// Compara por igualdade estrita, como o MANUAL: um pacote "quase atual" é um pacote errado.
-check('PKG-1', 'Todo pacote de submissão foi gerado do commit atual', () => {
+// A primeira versão desta checagem comparava `sourceCommit` com o HEAD por igualdade
+// estrita, e isso era insustentável: os pacotes são versionados, então commitá-los muda o
+// HEAD e os invalida no mesmo ato. Laço sem saída.
+//
+// O que importa não é de qual commit o pacote saiu, e sim se o que **embarca** mudou desde
+// então. Diferença contra a árvore de trabalho, e não contra o HEAD, porque alteração não
+// commitada em src/ também torna o pacote velho.
+const SHIPPED_PATHS = ['index.html', 'styles.css', 'src', 'platforms'];
+
+check('PKG-1', 'Todo pacote de submissão reflete o código que embarca', () => {
   const commit = currentCommit();
   const dir = path.join(ROOT, 'submission');
   if (!fs.existsSync(dir)) return { ok: false, detail: 'submission/ ausente; rode npm run build:all' };
@@ -625,18 +633,45 @@ check('PKG-1', 'Todo pacote de submissão foi gerado do commit atual', () => {
     let manifest;
     try { manifest = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { problems.push(`${relative}: ilegível`); continue; }
     if (!manifest.sourceCommit) { problems.push(`${relative}: sem sourceCommit`); continue; }
-    if (manifest.sourceCommit !== commit) {
-      let atras = '';
-      try {
-        const n = execSync(`git rev-list --count ${manifest.sourceCommit}..HEAD`, { cwd: ROOT, encoding: 'utf8' }).trim();
-        atras = ` (${n} commits atrás)`;
-      } catch { /* commit desconhecido pelo repositório */ }
-      problems.push(`${relative}: gerado de ${manifest.sourceCommit.slice(0, 7)}${atras}, atual é ${commit.slice(0, 7)}`);
+
+    const origem = manifest.sourceCommit;
+    // Sem `^{commit}`: no Windows o execSync passa por cmd.exe, onde `^` é escape e some.
+    let tipo = null;
+    try { tipo = execSync(`git cat-file -t ${origem}`, { cwd: ROOT, encoding: 'utf8' }).trim(); } catch { /* ausente */ }
+    if (tipo !== 'commit') {
+      problems.push(`${relative}: sourceCommit ${origem.slice(0, 7)} não existe neste repositório`);
+      continue;
+    }
+
+    // Construído a partir de um commit que não é antepassado do HEAD: outro ramo, ou
+    // histórico reescrito. Não dá para afirmar nada sobre o conteúdo.
+    try {
+      execSync(`git merge-base --is-ancestor ${origem} HEAD`, { cwd: ROOT, stdio: 'ignore' });
+    } catch {
+      problems.push(`${relative}: gerado de ${origem.slice(0, 7)}, que não é antepassado do HEAD`);
+      continue;
+    }
+
+    let mudados;
+    try {
+      mudados = execSync(`git diff --name-only ${origem} -- ${SHIPPED_PATHS.join(' ')}`, { cwd: ROOT, encoding: 'utf8' })
+        .split('\n').map((l) => l.trim()).filter(Boolean);
+    } catch {
+      problems.push(`${relative}: não foi possível comparar com ${origem.slice(0, 7)}`);
+      continue;
+    }
+
+    if (mudados.length) {
+      const amostra = mudados.slice(0, 4).join(', ');
+      const resto = mudados.length > 4 ? ` e mais ${mudados.length - 4}` : '';
+      problems.push(`${relative}: ${mudados.length} arquivo(s) que embarcam mudaram desde ${origem.slice(0, 7)} — ${amostra}${resto}; rode npm run build:all`);
     }
   }
   return {
     ok: problems.length === 0,
-    detail: problems.length ? problems.join('; ') : `${manifests.length} pacotes gerados do commit atual`,
+    detail: problems.length
+      ? problems.join('; ')
+      : `${manifests.length} pacotes em dia com ${SHIPPED_PATHS.join(', ')} (HEAD ${commit.slice(0, 7)})`,
   };
 });
 
